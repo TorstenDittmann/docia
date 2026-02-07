@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="420" viewBox="0 0 960 420" role="img" aria-labelledby="title desc">
+  <title id="title">Good Docs Architecture Map</title>
+  <desc id="desc">Summary parser, markdown renderer, and static emitter flow.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f8f6ed; }
+      .box { fill: #ffffff; stroke: #1f635d; stroke-width: 2; rx: 12; }
+      .title { font: 600 20px sans-serif; fill: #1f1f24; }
+      .label { font: 500 16px sans-serif; fill: #1f1f24; }
+      .arrow { stroke: #1f635d; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <polygon points="0 0, 10 4, 0 8" fill="#1f635d" />
+    </marker>
+  </defs>
+  <rect class="bg" x="0" y="0" width="960" height="420" />
+  <rect class="box" x="60" y="130" width="220" height="110" />
+  <rect class="box" x="370" y="130" width="220" height="110" />
+  <rect class="box" x="680" y="130" width="220" height="110" />
+  <text class="title" x="60" y="70">Build Flow</text>
+  <text class="label" x="100" y="180">SUMMARY Graph</text>
+  <text class="label" x="400" y="180">Markdown Render</text>
+  <text class="label" x="712" y="180">Static Emit</text>
+  <path class="arrow" d="M280 185 H360" />
+  <path class="arrow" d="M590 185 H670" />
+</svg>

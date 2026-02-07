@@ -1,0 +1,24 @@
+{
+  "name": "good-docs",
+  "version": "0.1.0",
+  "module": "src/cli.ts",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "good-docs": "./src/cli.ts"
+  },
+  "scripts": {
+    "good-docs": "bun run src/cli.ts",
+    "build": "bun run src/cli.ts build",
+    "dev": "bun run src/cli.ts dev",
+    "serve": "bun run src/cli.ts serve",
+    "check": "bun run src/cli.ts check",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
