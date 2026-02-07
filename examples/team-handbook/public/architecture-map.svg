@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="420" viewBox="0 0 960 420" role="img" aria-labelledby="title desc">
-  <title id="title">Good Docs Architecture Map</title>
+  <title id="title">docia Architecture Map</title>
   <desc id="desc">Summary parser, markdown renderer, and static emitter flow.</desc>
   <defs>
     <style>

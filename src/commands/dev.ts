@@ -5,7 +5,7 @@ import { readNumberFlag, readStringFlag } from "../utils/args";
 
 function printDevHelp(): void {
   console.log(
-    "Usage: good-docs dev [--config <path>] [--port <number>] [--host <host>]",
+    "Usage: docia dev [--config <path>] [--port <number>] [--host <host>]",
   );
   console.log("");
   console.log("Build and serve docs with file-watch rebuilds.");

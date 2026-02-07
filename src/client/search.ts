@@ -1,5 +1,7 @@
 /// <reference lib="dom" />
 
+const NAVIGATE_EVENT_NAME = "docia:navigate";
+
 interface SearchIndexPage {
   title?: string;
   routePath?: string;
@@ -133,10 +135,28 @@ async function copyToClipboard(text: string): Promise<boolean> {
   return copied;
 }
 
-function initCommandMenu(
-  basePath: string,
-  searchIndexHref: string,
+function addListener(
+  cleanups: Array<() => void>,
+  target: EventTarget,
+  type: string,
+  listener: EventListenerOrEventListenerObject,
+  options?: boolean | AddEventListenerOptions,
 ): void {
+  target.addEventListener(type, listener, options);
+  cleanups.push(() => {
+    target.removeEventListener(type, listener, options);
+  });
+}
+
+function dispatchNavigate(href: string): void {
+  window.dispatchEvent(
+    new CustomEvent(NAVIGATE_EVENT_NAME, {
+      detail: { href },
+    }),
+  );
+}
+
+function mountCommandMenu(basePath: string, searchIndexHref: string): () => void {
   const trigger = document.getElementById("gd-command-trigger");
   const overlay = document.getElementById("gd-command-overlay");
   const input = document.getElementById("gd-command-input");
@@ -148,9 +168,10 @@ function initCommandMenu(
     !(input instanceof HTMLInputElement) ||
     !(results instanceof HTMLUListElement)
   ) {
-    return;
+    return () => {};
   }
 
+  const cleanups: Array<() => void> = [];
   let pages: SearchIndexPage[] | null = null;
   let loadingPromise: Promise<SearchIndexPage[]> | null = null;
   let displayedItems: SearchResultItem[] = [];
@@ -271,7 +292,7 @@ function initCommandMenu(
     input.select();
   };
 
-  trigger.addEventListener("click", () => {
+  addListener(cleanups, trigger, "click", () => {
     if (overlay.hidden) {
       void openMenu();
     } else {
@@ -279,17 +300,17 @@ function initCommandMenu(
     }
   });
 
-  overlay.addEventListener("click", (event) => {
+  addListener(cleanups, overlay, "click", (event) => {
     if (event.target === overlay) {
       closeMenu();
     }
   });
 
-  input.addEventListener("input", () => {
+  addListener(cleanups, input, "input", () => {
     void refreshResults();
   });
 
-  results.addEventListener("mousemove", (event) => {
+  addListener(cleanups, results, "mousemove", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) {
       return;
@@ -311,13 +332,15 @@ function initCommandMenu(
     }
   });
 
-  results.addEventListener("click", () => {
+  addListener(cleanups, results, "click", () => {
     closeMenu();
   });
 
-  document.addEventListener("keydown", (event) => {
-    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-      event.preventDefault();
+  addListener(cleanups, document, "keydown", (event) => {
+    const keyboardEvent = event as KeyboardEvent;
+
+    if ((keyboardEvent.metaKey || keyboardEvent.ctrlKey) && keyboardEvent.key.toLowerCase() === "k") {
+      keyboardEvent.preventDefault();
       if (overlay.hidden) {
         void openMenu();
       } else {
@@ -330,14 +353,14 @@ function initCommandMenu(
       return;
     }
 
-    if (event.key === "Escape") {
-      event.preventDefault();
+    if (keyboardEvent.key === "Escape") {
+      keyboardEvent.preventDefault();
       closeMenu();
       return;
     }
 
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
+    if (keyboardEvent.key === "ArrowDown") {
+      keyboardEvent.preventDefault();
       if (displayedItems.length === 0) {
         return;
       }
@@ -347,8 +370,8 @@ function initCommandMenu(
       return;
     }
 
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
+    if (keyboardEvent.key === "ArrowUp") {
+      keyboardEvent.preventDefault();
       if (displayedItems.length === 0) {
         return;
       }
@@ -358,23 +381,29 @@ function initCommandMenu(
       return;
     }
 
-    if (event.key === "Enter") {
+    if (keyboardEvent.key === "Enter") {
       if (document.activeElement !== input) {
         return;
       }
 
-      event.preventDefault();
+      keyboardEvent.preventDefault();
       const target = displayedItems[activeIndex];
       if (!target) {
         return;
       }
 
-      window.location.assign(target.href);
+      closeMenu();
+      dispatchNavigate(target.href);
     }
   });
+
+  return () => {
+    closeMenu();
+    cleanups.forEach((cleanup) => cleanup());
+  };
 }
 
-function initPageAiMenu(markdownHref: string, llmsHref: string): void {
+function mountPageAiMenu(markdownHref: string, llmsHref: string): () => void {
   const copyTrigger = document.getElementById("gd-page-copy-trigger");
   const trigger = document.getElementById("gd-page-ai-trigger");
   const menu = document.getElementById("gd-page-ai-menu");
@@ -384,11 +413,12 @@ function initPageAiMenu(markdownHref: string, llmsHref: string): void {
     !(trigger instanceof HTMLButtonElement) ||
     !(menu instanceof HTMLDivElement)
   ) {
-    return;
+    return () => {};
   }
 
-  const chatgptLink = menu.querySelector<HTMLAnchorElement>('[data-ai-action="open-chatgpt"]');
-  const claudeLink = menu.querySelector<HTMLAnchorElement>('[data-ai-action="open-claude"]');
+  const cleanups: Array<() => void> = [];
+  const chatgptLink = menu.querySelector<HTMLAnchorElement>("[data-ai-action='open-chatgpt']");
+  const claudeLink = menu.querySelector<HTMLAnchorElement>("[data-ai-action='open-claude']");
 
   const absoluteMarkdownUrl = toAbsoluteUrl(markdownHref);
   const absoluteLlmsUrl = toAbsoluteUrl(llmsHref);
@@ -438,12 +468,12 @@ function initPageAiMenu(markdownHref: string, llmsHref: string): void {
     }, 1100);
   };
 
-  copyTrigger.addEventListener("click", (event) => {
+  addListener(cleanups, copyTrigger, "click", (event) => {
     event.preventDefault();
     void runCopyMarkdown();
   });
 
-  trigger.addEventListener("click", (event) => {
+  addListener(cleanups, trigger, "click", (event) => {
     event.stopPropagation();
     if (menu.hidden) {
       openMenu();
@@ -452,7 +482,7 @@ function initPageAiMenu(markdownHref: string, llmsHref: string): void {
     }
   });
 
-  document.addEventListener("click", (event) => {
+  addListener(cleanups, document, "click", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) {
       return;
@@ -473,13 +503,14 @@ function initPageAiMenu(markdownHref: string, llmsHref: string): void {
     closeMenu();
   });
 
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !menu.hidden) {
+  addListener(cleanups, document, "keydown", (event) => {
+    const keyboardEvent = event as KeyboardEvent;
+    if (keyboardEvent.key === "Escape" && !menu.hidden) {
       closeMenu();
     }
   });
 
-  menu.addEventListener("click", (event) => {
+  addListener(cleanups, menu, "click", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) {
       return;
@@ -489,18 +520,28 @@ function initPageAiMenu(markdownHref: string, llmsHref: string): void {
       closeMenu();
     }
   });
+
+  return () => {
+    closeMenu();
+    cleanups.forEach((cleanup) => cleanup());
+  };
 }
 
-export function initSearch(): void {
-  const basePath = readMetaContent("good-docs-base-path") ?? "/";
+export function initSearch(): () => void {
+  const basePath = readMetaContent("docia-base-path") ?? "/";
   const searchIndexHref =
-    readMetaContent("good-docs-search-index") ?? toBasePathHref(basePath, "/search-index.json");
+    readMetaContent("docia-search-index") ?? toBasePathHref(basePath, "/search-index.json");
   const markdownHref =
-    readMetaContent("good-docs-markdown-url") ??
+    readMetaContent("docia-markdown-url") ??
     toBasePathHref(basePath, `${window.location.pathname}.md`);
   const llmsHref =
-    readMetaContent("good-docs-llms-url") ?? toBasePathHref(basePath, "/llms.txt");
+    readMetaContent("docia-llms-url") ?? toBasePathHref(basePath, "/llms.txt");
 
-  initCommandMenu(basePath, searchIndexHref);
-  initPageAiMenu(markdownHref, llmsHref);
+  const cleanupCommandMenu = mountCommandMenu(basePath, searchIndexHref);
+  const cleanupPageAiMenu = mountPageAiMenu(markdownHref, llmsHref);
+
+  return () => {
+    cleanupPageAiMenu();
+    cleanupCommandMenu();
+  };
 }

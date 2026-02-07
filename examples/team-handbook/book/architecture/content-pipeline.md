@@ -1,6 +1,6 @@
 # Content Pipeline
 
-This chapter documents the build stages used by `good-docs`.
+This chapter documents the build stages used by `docia`.
 
 ## Stages
 
@@ -15,4 +15,4 @@ This chapter documents the build stages used by `good-docs`.
 
 - Keep routes stable to protect search indexing and backlinks.
 - Prefer explicit chapter titles for clear sidebar labels.
-- Use `good-docs check` in CI to catch broken links early.
+- Use `docia check` in CI to catch broken links early.

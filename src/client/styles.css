@@ -9,6 +9,7 @@
   --accent-soft: light-dark(#e7f1ff, #112640);
   --border: light-dark(#d8e1ef, #253248);
   --code-bg: light-dark(#f3f6fb, #0d172a);
+  --code-fg: light-dark(#1f2937, #dbe7ff);
   --shadow: light-dark(0 8px 24px rgba(15, 23, 42, 0.08), 0 10px 24px rgba(2, 8, 23, 0.44));
   --font-sans: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
   --font-serif: "Source Serif 4", "Iowan Old Style", Georgia, serif;
@@ -58,6 +59,8 @@ a {
 .sidebar,
 .toc {
   width: 100%;
+  display: flex;
+  flex-direction: column;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -280,6 +283,50 @@ a {
   padding-left: 0.4rem;
 }
 
+.sidebar-footer {
+  margin-top: 0.8rem;
+  padding-top: 0.62rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.44rem;
+}
+
+.sidebar-socials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.34rem;
+}
+
+.sidebar-social-link {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.2rem 0.42rem;
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+.sidebar-social-link:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--border));
+}
+
+.powered-by {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
+.powered-by:hover {
+  color: var(--accent);
+}
+
 .content {
   min-width: 0;
   width: 100%;
@@ -326,6 +373,27 @@ body.command-open {
 .page-actions {
   position: relative;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.page-edit-link {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0.34rem 0.46rem;
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.74rem;
+  line-height: 1;
+}
+
+.page-edit-link:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--border));
 }
 
 .page-ai-split {
@@ -486,9 +554,31 @@ body.command-open {
   max-width: 100%;
 }
 
+.markdown pre > code {
+  display: block;
+  white-space: pre;
+}
+
 .markdown code {
   font-family: var(--font-mono);
   font-size: 0.93em;
+}
+
+.markdown pre code {
+  background: transparent;
+  color: var(--code-fg);
+}
+
+.markdown pre.shiki {
+  background: var(--code-bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  .markdown pre.shiki,
+  .markdown pre.shiki span {
+    color: var(--shiki-dark) !important;
+    background-color: var(--shiki-dark-bg) !important;
+  }
 }
 
 .markdown :not(pre) > code {
@@ -617,6 +707,16 @@ body.command-open {
 
   .content {
     padding: 0.95rem;
+  }
+
+  .content-header-row {
+    flex-wrap: wrap;
+    gap: 0.46rem;
+  }
+
+  .page-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 
   .pager {

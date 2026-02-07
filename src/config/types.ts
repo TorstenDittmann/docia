@@ -1,8 +1,17 @@
+export interface SiteSocialsConfig {
+  github?: string;
+  x?: string;
+}
+
 export interface SiteConfig {
   title: string;
   description: string;
   language: string;
   url: string;
+  socials: SiteSocialsConfig;
+  githubEditBaseUrl: string;
+  githubEditBranch: string;
+  githubEditPath: string;
 }
 
 export interface MarkdownAutolinksConfig {

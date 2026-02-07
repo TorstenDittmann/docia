@@ -7,7 +7,7 @@ import { readBooleanFlag, readStringFlag } from "../utils/args";
 import { slugify, toTitleCaseFromName } from "../utils/strings";
 
 function printNewHelp(): void {
-  console.log("Usage: good-docs new <chapter-name> [--title <name>] [--force]");
+  console.log("Usage: docia new <chapter-name> [--title <name>] [--force]");
   console.log("");
   console.log("Create a new markdown chapter in your source directory.");
 }

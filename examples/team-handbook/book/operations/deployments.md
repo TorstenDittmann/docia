@@ -4,8 +4,8 @@ The docs site can be published to any static host.
 
 ## Release checklist
 
-- [ ] Run `bun run src/cli.ts check --config examples/team-handbook/good-docs.config.ts`
-- [ ] Run `bun run src/cli.ts build --config examples/team-handbook/good-docs.config.ts`
+- [ ] Run `bun run src/cli.ts check --config examples/team-handbook/docia.config.ts`
+- [ ] Run `bun run src/cli.ts build --config examples/team-handbook/docia.config.ts`
 - [ ] Confirm output contains `sitemap.xml`, `robots.txt`, and chapter pages
 - [ ] Upload `examples/team-handbook/dist` to your host
 

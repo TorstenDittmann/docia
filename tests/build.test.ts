@@ -21,7 +21,7 @@ describe("buildSite", () => {
     cleanupTasks.push(fixture.cleanup);
 
     await fixture.write(
-      "good-docs.config.ts",
+      "docia.config.ts",
       `export default {
   site: {
     title: "Fixture Docs",

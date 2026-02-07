@@ -23,6 +23,8 @@ export interface RenderPageLayoutInput {
   assets: RenderAssetManifest;
 }
 
+const DOCIA_GITHUB_URL = "https://github.com/dociajs/docia";
+
 function getChapterById(
   graph: SummaryGraph,
   chapterId: string | null,
@@ -166,6 +168,105 @@ function renderPagination(
   return `<nav class="pager">${previousHtml}${nextHtml}</nav>`;
 }
 
+function normalizeExternalUrl(value: string | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+function joinUrlPath(baseUrl: string, pathValue: string): string {
+  const base = baseUrl.replace(/\/+$/, "");
+  const path = pathValue.replace(/^\/+/, "");
+  return `${base}/${path}`;
+}
+
+function resolveEditUrl(
+  config: ResolvedConfig,
+  chapter: SummaryChapterEntry,
+): string | null {
+  const sourcePath = encodePathForHref(chapter.sourcePath);
+
+  const explicitBase = normalizeExternalUrl(config.site.githubEditBaseUrl);
+  if (explicitBase) {
+    return joinUrlPath(explicitBase, sourcePath);
+  }
+
+  const githubRepoUrl = normalizeExternalUrl(config.site.socials.github);
+  if (!githubRepoUrl) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(githubRepoUrl);
+    if (parsed.hostname !== "github.com") {
+      return null;
+    }
+
+    const segments = parsed.pathname.split("/").filter((segment) => segment.length > 0);
+    if (segments.length < 2) {
+      return null;
+    }
+
+    const owner = segments[0] ?? "";
+    const repository = (segments[1] ?? "").replace(/\.git$/i, "");
+    if (owner.length === 0 || repository.length === 0) {
+      return null;
+    }
+
+    const branch = encodeURIComponent(config.site.githubEditBranch || "main");
+    const sourceRoot = config.site.githubEditPath || config.srcDir;
+    const rootPath = encodePathForHref(sourceRoot).replace(/^\/+/, "");
+    const fullPath = rootPath.length > 0 ? `${rootPath}/${sourcePath}` : sourcePath;
+
+    return `https://github.com/${owner}/${repository}/edit/${branch}/${fullPath}`;
+  } catch {
+    return null;
+  }
+}
+
+function renderSidebarFooter(config: ResolvedConfig): string {
+  const socialLinks: string[] = [];
+  const githubHref = normalizeExternalUrl(config.site.socials.github);
+  const xHref = normalizeExternalUrl(config.site.socials.x);
+
+  if (githubHref) {
+    socialLinks.push(
+      `<a class="sidebar-social-link" href="${escapeHtml(githubHref)}" target="_blank" rel="noopener noreferrer">GitHub</a>`,
+    );
+  }
+
+  if (xHref) {
+    socialLinks.push(
+      `<a class="sidebar-social-link" href="${escapeHtml(xHref)}" target="_blank" rel="noopener noreferrer">X</a>`,
+    );
+  }
+
+  const socialsHtml =
+    socialLinks.length > 0
+      ? `<div class="sidebar-socials">${socialLinks.join("")}</div>`
+      : "";
+
+  return `<div class="sidebar-footer">${socialsHtml}<a class="powered-by" href="${escapeHtml(
+    DOCIA_GITHUB_URL,
+  )}" target="_blank" rel="noopener noreferrer">Powered by docsia</a></div>`;
+}
+
 function renderHead(
   config: ResolvedConfig,
   chapter: SummaryChapterEntry,
@@ -213,11 +314,11 @@ function renderHead(
   return `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(pageTitle)}</title>
-<meta name="generator" content="good-docs">
-<meta name="good-docs-base-path" content="${escapeHtml(config.basePath)}">
-<meta name="good-docs-search-index" content="${escapeHtml(searchIndexHref)}">
-<meta name="good-docs-markdown-url" content="${escapeHtml(markdownHref)}">
-<meta name="good-docs-llms-url" content="${escapeHtml(llmsHref)}">
+<meta name="generator" content="docia">
+<meta name="docia-base-path" content="${escapeHtml(config.basePath)}">
+<meta name="docia-search-index" content="${escapeHtml(searchIndexHref)}">
+<meta name="docia-markdown-url" content="${escapeHtml(markdownHref)}">
+<meta name="docia-llms-url" content="${escapeHtml(llmsHref)}">
 <meta name="theme-color" content="#0f172a">
 <meta name="robots" content="index,follow">
 <meta property="og:type" content="article">
@@ -248,6 +349,8 @@ export function renderPageLayout(input: RenderPageLayoutInput): string {
   const sidebar = graph.entries
     .map((entry) => renderSummaryEntry(entry, config, chapter.id))
     .join("");
+  const sidebarFooter = renderSidebarFooter(config);
+  const editUrl = resolveEditUrl(config, chapter);
   const toc = renderTableOfContents(config, headings);
   const hasToc = toc.length > 0;
   const appClassName = hasToc ? "app" : "app app-no-toc";
@@ -270,12 +373,18 @@ export function renderPageLayout(input: RenderPageLayoutInput): string {
         <nav aria-label="Chapters">
           <ul class="summary-list">${sidebar}</ul>
         </nav>
+        ${sidebarFooter}
       </aside>
       <main class="content">
         <header class="content-header">
           <div class="content-header-row">
             <small>${escapeHtml(config.site.title)}</small>
             <div class="page-actions">
+              ${
+                editUrl
+                  ? `<a class="page-edit-link" href="${escapeHtml(editUrl)}" target="_blank" rel="noopener noreferrer">Edit file</a>`
+                  : ""
+              }
               <div class="page-ai-split">
                 <button id="gd-page-copy-trigger" class="page-ai-copy" type="button">Copy markdown</button>
                 <button id="gd-page-ai-trigger" class="page-ai-chevron" type="button" aria-haspopup="menu" aria-controls="gd-page-ai-menu" aria-expanded="false" aria-label="More markdown actions">▾</button>
@@ -287,7 +396,6 @@ export function renderPageLayout(input: RenderPageLayoutInput): string {
               </div>
             </div>
           </div>
-          <h1>${escapeHtml(chapter.title)}</h1>
         </header>
         <article class="markdown">${contentHtml}</article>
         ${pagination}

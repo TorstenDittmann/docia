@@ -1,9 +1,9 @@
 import type { GoodDocsConfig } from "./types";
 
 export const DEFAULT_CONFIG_FILES = [
-  "good-docs.config.ts",
-  "good-docs.config.js",
-  "good-docs.config.mjs",
+  "docia.config.ts",
+  "docia.config.js",
+  "docia.config.mjs",
 ] as const;
 
 export const DEFAULT_CONFIG: GoodDocsConfig = {
@@ -17,6 +17,10 @@ export const DEFAULT_CONFIG: GoodDocsConfig = {
     description: "",
     language: "en",
     url: "",
+    socials: {},
+    githubEditBaseUrl: "",
+    githubEditBranch: "main",
+    githubEditPath: "",
   },
   markdown: {
     tables: true,

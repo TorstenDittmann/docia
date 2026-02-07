@@ -4,7 +4,7 @@ import { loadConfig } from "../config/load-config";
 import { readStringFlag } from "../utils/args";
 
 function printBuildHelp(): void {
-  console.log("Usage: good-docs build [--config <path>]");
+  console.log("Usage: docia build [--config <path>]");
   console.log("");
   console.log("Build static docs output.");
 }

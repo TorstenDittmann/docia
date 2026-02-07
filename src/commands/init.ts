@@ -6,9 +6,9 @@ import { readBooleanFlag, readStringFlag } from "../utils/args";
 import { toTitleCaseFromName } from "../utils/strings";
 
 function printInitHelp(): void {
-  console.log("Usage: good-docs init [directory] [--title <name>] [--force]");
+  console.log("Usage: docia init [directory] [--title <name>] [--force]");
   console.log("");
-  console.log("Create a new good-docs project scaffold.");
+  console.log("Create a new docia project scaffold.");
 }
 
 async function writeTemplateFile(
@@ -36,7 +36,7 @@ export async function runInitCommand(context: CommandContext): Promise<number> {
 
   const description =
     readStringFlag(context.flags, "description", "d") ??
-    `${title} documentation built with good-docs.`;
+    `${title} documentation built with docia.`;
 
   const templateFiles = createInitTemplate({
     title,
@@ -71,10 +71,10 @@ export async function runInitCommand(context: CommandContext): Promise<number> {
 
   const displayDirectory = relative(context.cwd, targetDirectory) || ".";
 
-  console.log(`Initialized good-docs project in ${displayDirectory}.`);
+  console.log(`Initialized docia project in ${displayDirectory}.`);
   console.log("Next steps:");
   console.log(`- cd ${displayDirectory}`);
-  console.log("- good-docs dev");
+  console.log("- docia dev");
 
   return 0;
 }

@@ -1,14 +1,14 @@
 {
-  "name": "good-docs",
+  "name": "docia",
   "version": "0.1.0",
   "module": "src/cli.ts",
   "type": "module",
   "private": true,
   "bin": {
-    "good-docs": "./src/cli.ts"
+    "docia": "./src/cli.ts"
   },
   "scripts": {
-    "good-docs": "bun run src/cli.ts",
+    "docia": "bun run src/cli.ts",
     "build": "bun run src/cli.ts build",
     "dev": "bun run src/cli.ts dev",
     "serve": "bun run src/cli.ts serve",
@@ -20,5 +20,8 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "shiki": "^3.22.0"
   }
 }

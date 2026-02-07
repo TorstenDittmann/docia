@@ -1,4 +1,4 @@
-# good-docs
+# docia
 
 SEO-first static docs generator in Bun, inspired by mdBook.
 
@@ -12,6 +12,22 @@ bun install
 
 ```bash
 bun run src/cli.ts --help
+```
+
+## Documentation
+
+Project usage docs are written with `docia` itself in `docs/book`.
+
+Run the docs locally:
+
+```bash
+bun run src/cli.ts dev --config docs/docia.config.ts
+```
+
+Build docs output:
+
+```bash
+bun run src/cli.ts build --config docs/docia.config.ts
 ```
 
 ### Commands
@@ -30,8 +46,8 @@ bun run src/cli.ts --help
 See `examples/team-handbook` for a complete docs sample.
 
 ```bash
-bun run src/cli.ts build --config examples/team-handbook/good-docs.config.ts
-bun run src/cli.ts serve --config examples/team-handbook/good-docs.config.ts --build
+bun run src/cli.ts build --config examples/team-handbook/docia.config.ts
+bun run src/cli.ts serve --config examples/team-handbook/docia.config.ts --build
 ```
 
 ## Status
@@ -39,13 +55,16 @@ bun run src/cli.ts serve --config examples/team-handbook/good-docs.config.ts --b
 Foundation is in progress:
 
 - CLI command skeleton
-- Config loading and validation (`good-docs.config.ts`)
+- Config loading and validation (`docia.config.ts`)
 - Project scaffolding via `init`
 - `SUMMARY.md` parser + chapter graph (nesting, prev/next)
 - Bun-native Markdown rendering (`Bun.markdown.html/render`)
 - Client assets bundled with `Bun.build` (JS + CSS loaders)
 - Static HTML build output with sidebar, TOC, and pagination
+- SPA-style client routing after first page load
+- Shiki build-time syntax highlighting for code blocks
 - Basic SEO output (`canonical`, meta description, JSON-LD, `robots.txt`, `llms.txt`)
 - LLM-friendly page actions (copy markdown, view markdown, open in ChatGPT/Claude)
+- Sidebar socials, "Powered by docsia", and optional GitHub edit links
 - `dev` and `serve` on `Bun.serve()`
 - `check` validations for missing files, duplicate routes/output paths, broken markdown links, and orphan markdown files

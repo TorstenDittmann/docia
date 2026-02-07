@@ -10,38 +10,38 @@ const commandList: CommandDefinition[] = [
   {
     name: "init",
     description: "Create a new docs scaffold",
-    usage: "good-docs init [directory] [--title <name>] [--force]",
+    usage: "docia init [directory] [--title <name>] [--force]",
     run: runInitCommand,
   },
   {
     name: "build",
     description: "Build static docs output",
-    usage: "good-docs build [--config <path>]",
+    usage: "docia build [--config <path>]",
     run: runBuildCommand,
   },
   {
     name: "dev",
     description: "Start docs in development mode",
-    usage: "good-docs dev [--config <path>] [--port <number>] [--host <host>]",
+    usage: "docia dev [--config <path>] [--port <number>] [--host <host>]",
     run: runDevCommand,
   },
   {
     name: "serve",
     description: "Serve built static output",
     usage:
-      "good-docs serve [--config <path>] [--port <number>] [--host <host>] [--build]",
+      "docia serve [--config <path>] [--port <number>] [--host <host>] [--build]",
     run: runServeCommand,
   },
   {
     name: "check",
     description: "Validate docs graph and links",
-    usage: "good-docs check [--config <path>]",
+    usage: "docia check [--config <path>]",
     run: runCheckCommand,
   },
   {
     name: "new",
     description: "Create a new chapter file",
-    usage: "good-docs new <chapter-name> [--title <name>] [--force]",
+    usage: "docia new <chapter-name> [--title <name>] [--force]",
     run: runNewCommand,
   },
 ];

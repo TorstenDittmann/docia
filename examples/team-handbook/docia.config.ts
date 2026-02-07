@@ -10,5 +10,12 @@ export default {
       "Engineering standards, architecture decisions, and delivery playbooks for Acme teams.",
     language: "en",
     url: "https://docs.acme.dev",
+    socials: {
+      github: "https://github.com/acme/platform-docs",
+      x: "https://x.com/acme",
+    },
+    githubEditBaseUrl: "",
+    githubEditBranch: "main",
+    githubEditPath: "",
   },
 };

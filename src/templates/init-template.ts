@@ -20,7 +20,7 @@ export function createInitTemplate(
 
   return [
     {
-      path: "good-docs.config.ts",
+      path: "docia.config.ts",
       contents: `export default {
   srcDir: "book",
   outDir: "dist",
@@ -32,6 +32,13 @@ export function createInitTemplate(
     description: "${description}",
     language: "${language}",
     url: "",
+    socials: {
+      github: "",
+      x: "",
+    },
+    githubEditBaseUrl: "",
+    githubEditBranch: "main",
+    githubEditPath: "",
   },
   markdown: {
     tables: true,
@@ -58,7 +65,7 @@ export function createInitTemplate(
 
 Welcome to your documentation site.
 
-Use \`good-docs build\` to generate static HTML output.
+Use \`docia build\` to generate static HTML output.
 `,
     },
     {
@@ -69,7 +76,7 @@ This chapter is a starting point for your docs.
 
 1. Edit this file.
 2. Update \`book/SUMMARY.md\`.
-3. Run \`good-docs dev\` while writing.
+3. Run \`docia dev\` while writing.
 `,
     },
     {

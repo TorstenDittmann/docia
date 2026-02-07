@@ -75,8 +75,15 @@ function formatIssue(issue: ChapterIssue): string {
   return `- ${issue.chapterPath}: ${issue.issue}`;
 }
 
+function stripCodeFromMarkdown(markdown: string): string {
+  return markdown
+    .replace(/```[\s\S]*?```/g, "\n")
+    .replace(/~~~[\s\S]*?~~~/g, "\n")
+    .replace(/`[^`\n]*`/g, "");
+}
+
 function printCheckHelp(): void {
-  console.log("Usage: good-docs check [--config <path>]");
+  console.log("Usage: docia check [--config <path>]");
   console.log("");
   console.log("Validate docs structure and links.");
 }
@@ -132,11 +139,12 @@ export async function runCheckCommand(context: CommandContext): Promise<number> 
   const linkIssues: ChapterIssue[] = [];
   for (const chapter of graph.chapters) {
     const markdown = await Bun.file(chapter.sourceAbsolutePath).text();
+    const markdownForLinkScan = stripCodeFromMarkdown(markdown);
     MARKDOWN_LINK_PATTERN.lastIndex = 0;
 
     const visitedTargets = new Set<string>();
     let match: RegExpExecArray | null;
-    while ((match = MARKDOWN_LINK_PATTERN.exec(markdown)) !== null) {
+    while ((match = MARKDOWN_LINK_PATTERN.exec(markdownForLinkScan)) !== null) {
       const rawTarget = match[1] ?? "";
       const normalizedTarget = normalizeSourcePathFromHref(chapter.sourcePath, rawTarget);
       if (!normalizedTarget) {

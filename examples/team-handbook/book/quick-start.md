@@ -7,14 +7,14 @@ This page gets a new engineer from zero to first docs contribution.
 ```bash
 # from repo root
 bun install
-bun run src/cli.ts dev --config examples/team-handbook/good-docs.config.ts
+bun run src/cli.ts dev --config examples/team-handbook/docia.config.ts
 ```
 
 ## First contribution checklist
 
 1. Add or update a chapter under `book/`.
 2. Register the chapter in `book/SUMMARY.md`.
-3. Run `good-docs check` before opening a PR.
+3. Run `docia check` before opening a PR.
 
 ## Where to go next
 

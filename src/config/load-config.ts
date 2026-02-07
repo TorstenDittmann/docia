@@ -10,6 +10,7 @@ import type {
   MarkdownHeadingsConfig,
   ResolvedConfig,
   SiteConfig,
+  SiteSocialsConfig,
 } from "./types";
 
 export interface LoadConfigOptions {
@@ -86,6 +87,42 @@ function normalizeSiteUrl(url: string): string {
   return trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
 }
 
+function normalizeOptionalUrl(url: string): string {
+  const trimmed = url.trim();
+  if (trimmed.length === 0) {
+    return "";
+  }
+
+  return trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
+}
+
+function normalizePathPrefix(pathValue: string): string {
+  return pathValue.trim().replace(/^\/+/, "").replace(/\/+$/, "");
+}
+
+function parseSocialsConfig(value: unknown): SiteSocialsConfig {
+  if (!isPlainObject(value)) {
+    throw new ConfigError("Invalid config value at `site.socials`: expected an object.");
+  }
+
+  const socials: SiteSocialsConfig = {};
+  if ("github" in value && value.github !== undefined) {
+    const github = expectStringAllowEmpty(value.github, "site.socials.github");
+    if (github.length > 0) {
+      socials.github = github;
+    }
+  }
+
+  if ("x" in value && value.x !== undefined) {
+    const x = expectStringAllowEmpty(value.x, "site.socials.x");
+    if (x.length > 0) {
+      socials.x = x;
+    }
+  }
+
+  return socials;
+}
+
 function parseAutolinksConfig(value: unknown): boolean | MarkdownAutolinksConfig {
   if (typeof value === "boolean") {
     return value;
@@ -147,6 +184,27 @@ function parseSiteConfig(value: unknown): Partial<SiteConfig> {
   }
   if ("url" in value && value.url !== undefined) {
     nextValue.url = expectStringAllowEmpty(value.url, "site.url");
+  }
+  if ("socials" in value && value.socials !== undefined) {
+    nextValue.socials = parseSocialsConfig(value.socials);
+  }
+  if ("githubEditBaseUrl" in value && value.githubEditBaseUrl !== undefined) {
+    nextValue.githubEditBaseUrl = expectStringAllowEmpty(
+      value.githubEditBaseUrl,
+      "site.githubEditBaseUrl",
+    );
+  }
+  if ("githubEditBranch" in value && value.githubEditBranch !== undefined) {
+    nextValue.githubEditBranch = expectStringAllowEmpty(
+      value.githubEditBranch,
+      "site.githubEditBranch",
+    );
+  }
+  if ("githubEditPath" in value && value.githubEditPath !== undefined) {
+    nextValue.githubEditPath = expectStringAllowEmpty(
+      value.githubEditPath,
+      "site.githubEditPath",
+    );
   }
 
   return nextValue;
@@ -303,6 +361,32 @@ function mergeConfig(userConfig: GoodDocsUserConfig): GoodDocsConfig {
 
   merged.basePath = normalizeBasePath(merged.basePath);
   merged.site.url = normalizeSiteUrl(merged.site.url);
+  merged.site.socials = {
+    ...DEFAULT_CONFIG.site.socials,
+    ...merged.site.socials,
+  };
+
+  if (merged.site.socials.github !== undefined) {
+    const normalizedGithub = normalizeOptionalUrl(merged.site.socials.github);
+    if (normalizedGithub.length > 0) {
+      merged.site.socials.github = normalizedGithub;
+    } else {
+      delete merged.site.socials.github;
+    }
+  }
+
+  if (merged.site.socials.x !== undefined) {
+    const normalizedX = normalizeOptionalUrl(merged.site.socials.x);
+    if (normalizedX.length > 0) {
+      merged.site.socials.x = normalizedX;
+    } else {
+      delete merged.site.socials.x;
+    }
+  }
+
+  merged.site.githubEditBaseUrl = normalizeOptionalUrl(merged.site.githubEditBaseUrl);
+  merged.site.githubEditBranch = merged.site.githubEditBranch.trim() || "main";
+  merged.site.githubEditPath = normalizePathPrefix(merged.site.githubEditPath);
 
   return merged;
 }

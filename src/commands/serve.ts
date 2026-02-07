@@ -8,7 +8,7 @@ import { waitForTermination } from "../utils/process";
 
 function printServeHelp(): void {
   console.log(
-    "Usage: good-docs serve [--config <path>] [--port <number>] [--host <host>] [--build]",
+    "Usage: docia serve [--config <path>] [--port <number>] [--host <host>] [--build]",
   );
   console.log("");
   console.log("Serve built static docs output.");
@@ -35,7 +35,7 @@ export async function runServeCommand(context: CommandContext): Promise<number> 
   ).exists();
   if (!indexExists) {
     throw new CliError(
-      `No build output found in \`${loaded.config.outDirAbsolute}\`. Run \`good-docs build\` first or pass \`--build\`.`,
+      `No build output found in \`${loaded.config.outDirAbsolute}\`. Run \`docia build\` first or pass \`--build\`.`,
     );
   }
 

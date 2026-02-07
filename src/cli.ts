@@ -5,7 +5,7 @@ import { getCommand, getCommands } from "./commands";
 import { CliError } from "./errors";
 import { parseCliInput, readBooleanFlag } from "./utils/args";
 
-const CLI_NAME = "good-docs";
+const CLI_NAME = "docia";
 
 async function getVersion(): Promise<string> {
   const packageJsonFile = Bun.file(new URL("../package.json", import.meta.url));

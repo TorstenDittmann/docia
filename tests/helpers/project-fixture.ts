@@ -9,7 +9,7 @@ export interface TestProjectFixture {
 }
 
 export async function createTestProjectFixture(): Promise<TestProjectFixture> {
-  const rootDir = await mkdtemp(join(tmpdir(), "good-docs-test-"));
+  const rootDir = await mkdtemp(join(tmpdir(), "docia-test-"));
 
   const write = async (relativePath: string, contents: string): Promise<void> => {
     const absolutePath = resolve(rootDir, relativePath);
