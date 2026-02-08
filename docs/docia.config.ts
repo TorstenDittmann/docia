@@ -10,11 +10,11 @@ export default {
     language: "en",
     url: "",
     socials: {
-      github: "https://github.com/dociajs/docia",
-      x: "",
+      github: "https://github.com/TorstenDittmann/docia",
+      x: "https://x.com/dittmanntorsten",
     },
-    githubEditBaseUrl: "",
+    githubEditBaseUrl: "https://github.com/TorstenDittmann/docia",
     githubEditBranch: "main",
-    githubEditPath: "",
+    githubEditPath: "docs",
   },
 };
