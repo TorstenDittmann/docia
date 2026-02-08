@@ -27,6 +27,71 @@ export interface RenderPageLayoutInput {
 
 const DOCIA_GITHUB_URL = "https://github.com/dociajs/docia";
 
+function IconGithub(): JSX.Element {
+  return (
+    <svg className="inline-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M12 .5a11.5 11.5 0 0 0-3.64 22.42c.57.1.78-.25.78-.56l-.01-2.18c-3.17.7-3.84-1.35-3.84-1.35a3 3 0 0 0-1.27-1.67c-1.04-.71.08-.7.08-.7a2.4 2.4 0 0 1 1.75 1.18 2.45 2.45 0 0 0 3.35.96c.05-.62.3-1.2.72-1.66-2.53-.29-5.2-1.27-5.2-5.63a4.39 4.39 0 0 1 1.17-3.05 4.1 4.1 0 0 1 .11-3.01s.96-.31 3.14 1.17a10.86 10.86 0 0 1 5.72 0c2.18-1.48 3.14-1.17 3.14-1.17.4.95.45 2 .11 3.01a4.39 4.39 0 0 1 1.17 3.05c0 4.37-2.67 5.34-5.22 5.62a2.72 2.72 0 0 1 .77 2.11l-.01 3.12c0 .31.21.67.79.56A11.5 11.5 0 0 0 12 .5Z"
+      />
+    </svg>
+  );
+}
+
+function IconX(): JSX.Element {
+  return (
+    <svg className="inline-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M14.1 10.2 21.6 1.5h-1.8l-6.5 7.6-5.1-7.6H2.5l7.8 11.6-7.8 9h1.8l6.9-8 5.3 8h5.7l-8.1-12Z"
+      />
+    </svg>
+  );
+}
+
+function IconMarkdown(): JSX.Element {
+  return (
+    <svg className="inline-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path fill="currentColor" d="M22.27 19.385H1.73A1.73 1.73 0 0 1 0 17.655V6.345a1.73 1.73 0 0 1 1.73-1.73h20.54A1.73 1.73 0 0 1 24 6.345v11.308a1.73 1.73 0 0 1-1.73 1.731zM5.769 15.923v-4.5l2.308 2.885l2.307-2.885v4.5h2.308V8.078h-2.308l-2.307 2.885l-2.308-2.885H3.46v7.847zM21.232 12h-2.309V8.077h-2.307V12h-2.308l3.461 4.039z" />
+    </svg>
+  );
+}
+
+function IconOpenAI(): JSX.Element {
+  return (
+    <svg className="inline-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M22.282 9.821a6 6 0 0 0-.516-4.91a6.05 6.05 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a6 6 0 0 0-3.998 2.9a6.05 6.05 0 0 0 .743 7.097a5.98 5.98 0 0 0 .51 4.911a6.05 6.05 0 0 0 6.515 2.9A6 6 0 0 0 13.26 24a6.06 6.06 0 0 0 5.772-4.206a6 6 0 0 0 3.997-2.9a6.06 6.06 0 0 0-.747-7.073M13.26 22.43a4.48 4.48 0 0 1-2.876-1.04l.141-.081l4.779-2.758a.8.8 0 0 0 .392-.681v-6.737l2.02 1.168a.07.07 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494M3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085l4.783 2.759a.77.77 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646M2.34 7.896a4.5 4.5 0 0 1 2.366-1.973V11.6a.77.77 0 0 0 .388.677l5.815 3.354l-2.02 1.168a.08.08 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855l-5.833-3.387L15.119 7.2a.08.08 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667m2.01-3.023l-.141-.085l-4.774-2.782a.78.78 0 0 0-.785 0L9.409 9.23V6.897a.07.07 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135l-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.8.8 0 0 0-.393.681zm1.097-2.365l2.602-1.5l2.607 1.5v2.999l-2.597 1.5l-2.607-1.5Z"
+      />
+    </svg>
+  );
+}
+
+function IconClaude(): JSX.Element {
+  return (
+    <svg className="inline-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path fill="currentColor" d="m4.714 15.956l4.718-2.648l.079-.23l-.08-.128h-.23l-.79-.048l-2.695-.073l-2.337-.097l-2.265-.122l-.57-.121l-.535-.704l.055-.353l.48-.321l.685.06l1.518.104l2.277.157l1.651.098l2.447.255h.389l.054-.158l-.133-.097l-.103-.098l-2.356-1.596l-2.55-1.688l-1.336-.972l-.722-.491L2 6.223l-.158-1.008l.656-.722l.88.06l.224.061l.893.686l1.906 1.476l2.49 1.833l.364.304l.146-.104l.018-.072l-.164-.274l-1.354-2.446l-1.445-2.49l-.644-1.032l-.17-.619a3 3 0 0 1-.103-.729L6.287.133L6.7 0l.995.134l.42.364l.619 1.415L9.735 4.14l1.555 3.03l.455.898l.243.832l.09.255h.159V9.01l.127-1.706l.237-2.095l.23-2.695l.08-.76l.376-.91l.747-.492l.583.28l.48.685l-.067.444l-.286 1.851l-.558 2.903l-.365 1.942h.213l.243-.242l.983-1.306l1.652-2.064l.728-.82l.85-.904l.547-.431h1.032l.759 1.129l-.34 1.166l-1.063 1.347l-.88 1.142l-1.263 1.7l-.79 1.36l.074.11l.188-.02l2.853-.606l1.542-.28l1.84-.315l.832.388l.09.395l-.327.807l-1.967.486l-2.307.462l-3.436.813l-.043.03l.049.061l1.548.146l.662.036h1.62l3.018.225l.79.522l.473.638l-.08.485l-1.213.62l-1.64-.389l-3.825-.91l-1.31-.329h-.183v.11l1.093 1.068l2.003 1.81l2.508 2.33l.127.578l-.321.455l-.34-.049l-2.204-1.657l-.85-.747l-1.925-1.62h-.127v.17l.443.649l2.343 3.521l.122 1.08l-.17.353l-.607.213l-.668-.122l-1.372-1.924l-1.415-2.168l-1.141-1.943l-.14.08l-.674 7.254l-.316.37l-.728.28l-.607-.461l-.322-.747l.322-1.476l.388-1.924l.316-1.53l.285-1.9l.17-.632l-.012-.042l-.14.018l-1.432 1.967l-2.18 2.945l-1.724 1.845l-.413.164l-.716-.37l.066-.662l.401-.589l2.386-3.036l1.439-1.882l.929-1.086l-.006-.158h-.055L4.138 18.56l-1.13.146l-.485-.456l.06-.746l.231-.243l1.907-1.312Z" />
+    </svg>
+  );
+}
+
+function IconEdit(): JSX.Element {
+  return (
+    <svg className="inline-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path fill="currentColor" d="M3 17.25V21h3.75L18.06 9.69l-3.75-3.75L3 17.25Zm2 2.75v-1.9l9.31-9.31 1.9 1.9L6.9 20H5ZM20.71 7.04a1 1 0 0 0 0-1.42L18.37 3.3a1 1 0 0 0-1.42 0l-1.13 1.13 3.75 3.75 1.14-1.14Z" />
+    </svg>
+  );
+}
+
+function IconCopy(): JSX.Element {
+  return (
+    <svg className="inline-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path fill="currentColor" d="M16 1H6a2 2 0 0 0-2 2v12h2V3h10V1Zm3 4H10a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H10V7h9v14Z" />
+    </svg>
+  );
+}
+
 function getChapterById(
   graph: SummaryGraph,
   chapterId: string | null,
@@ -229,6 +294,7 @@ function renderSidebarFooter(config: ResolvedConfig): JSX.Element {
               target="_blank"
               rel="noopener noreferrer"
             >
+              <IconGithub />
               GitHub
             </a>
           ) : null}
@@ -239,6 +305,7 @@ function renderSidebarFooter(config: ResolvedConfig): JSX.Element {
               target="_blank"
               rel="noopener noreferrer"
             >
+              <IconX />
               X
             </a>
           ) : null}
@@ -447,11 +514,13 @@ function PageDocument(props: RenderPageLayoutInput): JSX.Element {
                 <div className="page-actions">
                   {editUrl ? (
                     <a className="page-edit-link" href={editUrl} target="_blank" rel="noopener noreferrer">
+                      <IconEdit />
                       Edit file
                     </a>
                   ) : null}
                   <div className="page-ai-split">
                     <button id="gd-page-copy-trigger" className="page-ai-copy" type="button">
+                      <IconCopy />
                       Copy markdown
                     </button>
                     <button
@@ -475,6 +544,7 @@ function PageDocument(props: RenderPageLayoutInput): JSX.Element {
                       data-ai-action="view-markdown"
                       role="menuitem"
                     >
+                      <IconMarkdown />
                       View markdown
                     </a>
                     <a
@@ -485,6 +555,7 @@ function PageDocument(props: RenderPageLayoutInput): JSX.Element {
                       data-ai-action="open-chatgpt"
                       role="menuitem"
                     >
+                      <IconOpenAI />
                       Open in ChatGPT
                     </a>
                     <a
@@ -495,6 +566,7 @@ function PageDocument(props: RenderPageLayoutInput): JSX.Element {
                       data-ai-action="open-claude"
                       role="menuitem"
                     >
+                      <IconClaude />
                       Open in Claude
                     </a>
                   </div>
