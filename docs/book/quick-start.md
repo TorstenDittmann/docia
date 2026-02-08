@@ -9,7 +9,9 @@ This section walks through the default workflow.
 `docia.config.ts`:
 
 ```ts
-export default {
+import { defineConfig } from "docia";
+
+export default defineConfig({
 	srcDir: "book",
 	outDir: "dist",
 	basePath: "/",
@@ -20,7 +22,7 @@ export default {
 		language: "en",
 		url: "https://docs.acme.dev",
 	},
-};
+});
 ```
 
 `book/SUMMARY.md`:

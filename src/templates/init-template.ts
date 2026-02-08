@@ -19,34 +19,17 @@ export function createInitTemplate(options: InitTemplateOptions): InitTemplateFi
 	return [
 		{
 			path: "docia.config.ts",
-			contents: `export default {
+			contents: `import { defineConfig } from "docia";
+
+export default defineConfig({
   srcDir: "book",
   outDir: "dist",
-  publicDir: "public",
-  basePath: "/",
-  prettyUrls: true,
   site: {
     title: "${title}",
     description: "${description}",
     language: "${language}",
-    url: "",
-    socials: {
-      github: "",
-      x: "",
-    },
-    githubEditBaseUrl: "",
-    githubEditBranch: "main",
-    githubEditPath: "",
   },
-  markdown: {
-    tables: true,
-    strikethrough: true,
-    tasklists: true,
-    autolinks: true,
-    headings: { ids: true },
-    tagFilter: true,
-  },
-};
+});
 `,
 		},
 		{

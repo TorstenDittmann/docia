@@ -1,4 +1,6 @@
-export default {
+import { defineConfig } from "../src/index";
+
+export default defineConfig({
 	srcDir: "docs/book",
 	outDir: "docs/dist",
 	publicDir: "docs/public",
@@ -15,4 +17,4 @@ export default {
 		},
 		githubEditBaseUrl: "https://github.com/TorstenDittmann/docia/edit/main/docs/book",
 	},
-};
+});

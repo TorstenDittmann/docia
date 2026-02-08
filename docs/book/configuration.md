@@ -5,7 +5,9 @@
 Example:
 
 ```ts
-export default {
+import { defineConfig } from "docia";
+
+export default defineConfig({
 	srcDir: "book",
 	outDir: "dist",
 	publicDir: "public",
@@ -32,7 +34,7 @@ export default {
 		strikethrough: true,
 		tagFilter: true,
 	},
-};
+});
 ```
 
 ## Core options
