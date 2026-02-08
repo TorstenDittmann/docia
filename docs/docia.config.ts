@@ -8,7 +8,7 @@ export default {
     title: "docia",
     description: "Usage guide for building static documentation with docia.",
     language: "en",
-    url: "",
+    url: "https://docia.xyz/",
     socials: {
       github: "https://github.com/TorstenDittmann/docia",
       x: "https://x.com/dittmanntorsten",
