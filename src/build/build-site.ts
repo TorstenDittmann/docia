@@ -1,5 +1,5 @@
 import { cp, mkdir, rm, stat } from "node:fs/promises";
-import { dirname, posix, resolve } from "node:path";
+import { dirname, posix, relative, resolve, sep } from "node:path";
 import { loadSummaryGraph } from "../book";
 import type { SummaryGraph } from "../book";
 import type { ResolvedConfig } from "../config/types";
@@ -16,6 +16,18 @@ export interface BuildSiteResult {
   outDirAbsolute: string;
   pageCount: number;
   copiedPublicDir: boolean;
+  clientAssetCount: number;
+  searchDocumentCount: number;
+  markdownMirrorCount: number;
+  emittedSeoFiles: string[];
+  timing: {
+    totalMs: number;
+    cleanMs: number;
+    assetsMs: number;
+    pagesMs: number;
+    searchAndSeoMs: number;
+  };
+  outputFiles: string[];
 }
 
 export interface BuildSiteOptions {
@@ -120,10 +132,17 @@ export async function buildSite(
   config: ResolvedConfig,
   options: BuildSiteOptions = {},
 ): Promise<BuildSiteResult> {
+  const startedAt = Date.now();
   const graph = await loadSummaryGraph(config);
   const markdownEngine = await createMarkdownEngine(config);
   const searchEntries: ReturnType<typeof createSearchEntry>[] = [];
+  const outputFiles: string[] = [];
+  let markdownMirrorCount = 0;
 
+  const toRelativeOutputPath = (absolutePath: string): string =>
+    relative(config.outDirAbsolute, absolutePath).split(sep).join("/");
+
+  const cleanStartedAt = Date.now();
   await rm(config.outDirAbsolute, { recursive: true, force: true });
   await mkdir(config.outDirAbsolute, { recursive: true });
 
@@ -131,12 +150,19 @@ export async function buildSite(
   if (copiedPublicDir) {
     await cp(config.publicDirAbsolute, config.outDirAbsolute, { recursive: true });
   }
+  const cleanMs = Date.now() - cleanStartedAt;
 
+  const assetsStartedAt = Date.now();
   const assets = await buildClientAssets(config, {
     minify: options.minifyAssets,
     sourcemap: options.sourcemapAssets,
   });
+  assets.outputFiles.forEach((absolutePath) => {
+    outputFiles.push(toRelativeOutputPath(absolutePath));
+  });
+  const assetsMs = Date.now() - assetsStartedAt;
 
+  const pagesStartedAt = Date.now();
   for (const chapter of graph.chapters) {
     const chapterFile = Bun.file(chapter.sourceAbsolutePath);
     if (!(await chapterFile.exists())) {
@@ -177,19 +203,44 @@ export async function buildSite(
     const outputPath = resolve(config.outDirAbsolute, chapter.outputPath);
     await mkdir(dirname(outputPath), { recursive: true });
     await Bun.write(outputPath, html);
+    outputFiles.push(chapter.outputPath);
 
     const markdownOutputPath = resolve(config.outDirAbsolute, `${chapter.outputPath}.md`);
     await mkdir(dirname(markdownOutputPath), { recursive: true });
     await Bun.write(markdownOutputPath, markdownSource);
+    markdownMirrorCount += 1;
+    outputFiles.push(`${chapter.outputPath}.md`);
   }
+  const pagesMs = Date.now() - pagesStartedAt;
 
+  const searchAndSeoStartedAt = Date.now();
   await emitSearchIndex(config.outDirAbsolute, searchEntries);
-  await emitSeoArtifacts(config, graph);
+  outputFiles.push("search-index.json");
+  const emittedSeoFiles = await emitSeoArtifacts(config, graph);
+  outputFiles.push(...emittedSeoFiles);
+  const searchAndSeoMs = Date.now() - searchAndSeoStartedAt;
+  const totalMs = Date.now() - startedAt;
+
+  const uniqueOutputFiles = [...new Set(outputFiles)].sort((left, right) =>
+    left.localeCompare(right),
+  );
 
   return {
     graph,
     outDirAbsolute: config.outDirAbsolute,
     pageCount: graph.chapters.length,
     copiedPublicDir,
+    clientAssetCount: assets.outputFiles.length,
+    searchDocumentCount: searchEntries.length,
+    markdownMirrorCount,
+    emittedSeoFiles,
+    timing: {
+      totalMs,
+      cleanMs,
+      assetsMs,
+      pagesMs,
+      searchAndSeoMs,
+    },
+    outputFiles: uniqueOutputFiles,
   };
 }

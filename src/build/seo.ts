@@ -82,7 +82,9 @@ function buildLlmsTxt(config: ResolvedConfig, graph: SummaryGraph): string {
 export async function emitSeoArtifacts(
   config: ResolvedConfig,
   graph: SummaryGraph,
-): Promise<void> {
+): Promise<string[]> {
+  const emittedFiles: string[] = [];
+
   const chapterUrls = graph.chapters
     .map((chapter) => {
       const routeHref = toBasePathHref(config.basePath, chapter.routePath);
@@ -93,6 +95,7 @@ export async function emitSeoArtifacts(
   if (chapterUrls.length > 0) {
     const sitemapXml = buildSitemapXml(chapterUrls);
     await Bun.write(resolve(config.outDirAbsolute, "sitemap.xml"), sitemapXml);
+    emittedFiles.push("sitemap.xml");
   }
 
   const sitemapHref = maybeAbsoluteUrl(
@@ -101,7 +104,11 @@ export async function emitSeoArtifacts(
   );
   const robotsTxt = buildRobotsTxt(sitemapHref);
   await Bun.write(resolve(config.outDirAbsolute, "robots.txt"), robotsTxt);
+  emittedFiles.push("robots.txt");
 
   const llmsTxt = buildLlmsTxt(config, graph);
   await Bun.write(resolve(config.outDirAbsolute, "llms.txt"), llmsTxt);
+  emittedFiles.push("llms.txt");
+
+  return emittedFiles;
 }
