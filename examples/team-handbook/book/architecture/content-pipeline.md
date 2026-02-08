@@ -4,12 +4,12 @@ This chapter documents the build stages used by `docia`.
 
 ## Stages
 
-| Stage | Input | Output |
-| --- | --- | --- |
-| Summary parse | `book/SUMMARY.md` | ordered chapter graph |
-| Markdown render | chapter markdown | semantic HTML + heading metadata |
-| Site emit | graph + rendered pages | static files in `dist/` |
-| Search emit | rendered text | `search-index.json` |
+| Stage           | Input                  | Output                           |
+| --------------- | ---------------------- | -------------------------------- |
+| Summary parse   | `book/SUMMARY.md`      | ordered chapter graph            |
+| Markdown render | chapter markdown       | semantic HTML + heading metadata |
+| Site emit       | graph + rendered pages | static files in `dist/`          |
+| Search emit     | rendered text          | `search-index.json`              |
 
 ## Notes
 

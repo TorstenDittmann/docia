@@ -7,22 +7,22 @@ import { initSearch } from "./search";
 let cleanupSearch: (() => void) | null = null;
 
 function mountPageEnhancements(): void {
-  cleanupSearch?.();
-  cleanupSearch = initSearch();
+	cleanupSearch?.();
+	cleanupSearch = initSearch();
 }
 
 function bootstrapClient(): void {
-  mountPageEnhancements();
+	mountPageEnhancements();
 
-  initSpaRouter({
-    onAfterNavigate: () => {
-      mountPageEnhancements();
-    },
-  });
+	initSpaRouter({
+		onAfterNavigate: () => {
+			mountPageEnhancements();
+		},
+	});
 }
 
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", bootstrapClient);
+	document.addEventListener("DOMContentLoaded", bootstrapClient);
 } else {
-  bootstrapClient();
+	bootstrapClient();
 }
