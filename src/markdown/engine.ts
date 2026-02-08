@@ -23,6 +23,7 @@ const SHIKI_LANGUAGES = [
 	"javascript",
 	"json",
 	"markdown",
+	"php",
 	"rust",
 	"sql",
 	"toml",
@@ -101,7 +102,9 @@ function decodeHtmlEntities(input: string): string {
 		.replace(/&gt;/g, ">")
 		.replace(/&quot;/g, '"')
 		.replace(/&#39;/g, "'")
-		.replace(/&#x27;/gi, "'");
+		.replace(/&#x27;/gi, "'")
+		.replace(/&#x2F;/gi, "/")
+		.replace(/&#x60;/gi, "`");
 }
 
 function extractLanguageFromAttributes(attributes: string): string | null {

@@ -60,7 +60,10 @@ function parseSummaryItems(text: string): ParsedSummaryItem[] {
 				indentLevels.push(indentWidth);
 				depth = indentLevels.length - 1;
 			} else {
-				while (indentLevels.length > 1 && (indentLevels[indentLevels.length - 1] ?? 0) > indentWidth) {
+				while (
+					indentLevels.length > 1 &&
+					(indentLevels[indentLevels.length - 1] ?? 0) > indentWidth
+				) {
 					indentLevels.pop();
 				}
 				if (indentLevels[indentLevels.length - 1] !== indentWidth) {
