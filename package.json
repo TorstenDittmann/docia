@@ -1,6 +1,6 @@
 {
 	"name": "docia",
-	"version": "0.0.9",
+	"version": "0.0.10",
 	"bin": {
 		"docia": "./src/cli.ts"
 	},
@@ -10,6 +10,16 @@
 	],
 	"type": "module",
 	"module": "src/cli.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"default": "./src/index.ts"
+		},
+		"./cli": {
+			"types": "./src/cli.ts",
+			"default": "./src/cli.ts"
+		}
+	},
 	"scripts": {
 		"docia": "bun run src/cli.ts",
 		"build": "bun run src/cli.ts build",
