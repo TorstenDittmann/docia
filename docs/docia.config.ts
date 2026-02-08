@@ -13,8 +13,6 @@ export default {
 			github: "https://github.com/TorstenDittmann/docia",
 			x: "https://x.com/dittmanntorsten",
 		},
-		githubEditBaseUrl: "https://github.com/TorstenDittmann/docia",
-		githubEditBranch: "main",
-		githubEditPath: "docs",
+		githubEditBaseUrl: "https://github.com/TorstenDittmann/docia/edit/main/docs/book",
 	},
 };
