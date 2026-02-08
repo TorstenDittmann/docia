@@ -478,33 +478,57 @@ function PageDocument(props: RenderPageLayoutInput): JSX.Element {
       <body>
         <div className={appClassName}>
           <aside className="sidebar">
-            <p className="brand">{config.site.title}</p>
-            <button
-              id="gd-command-trigger"
-              className="command-trigger"
-              type="button"
-              aria-haspopup="dialog"
-              aria-controls="gd-command-overlay"
-              aria-expanded="false"
-            >
-              <span className="command-trigger-icon" aria-hidden="true">
-                ⌘
-              </span>
-              <span className="command-trigger-label">Search docs</span>
-            </button>
-            <nav aria-label="Chapters">
-              <ul className="summary-list">
-                {graph.entries.map((entry) => (
-                  <SidebarEntry
-                    key={entry.id}
-                    entry={entry}
-                    config={config}
-                    activeChapterId={chapter.id}
+            <div className="sidebar-top">
+              <p className="brand">{config.site.title}</p>
+              <button
+                id="gd-mobile-nav-toggle"
+                className="mobile-nav-toggle"
+                type="button"
+                aria-expanded="false"
+                aria-controls="gd-mobile-nav-panel"
+              >
+                <svg
+                  className="mobile-nav-icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M4 6.5h16v2H4zm0 4.5h16v2H4zm0 4.5h16v2H4z"
                   />
-                ))}
-              </ul>
-            </nav>
-            {renderSidebarFooter(config)}
+                </svg>
+                Menu
+              </button>
+            </div>
+            <div id="gd-mobile-nav-panel" className="mobile-nav-panel">
+              <button
+                id="gd-command-trigger"
+                className="command-trigger"
+                type="button"
+                aria-haspopup="dialog"
+                aria-controls="gd-command-overlay"
+                aria-expanded="false"
+              >
+                <span className="command-trigger-icon" aria-hidden="true">
+                  ⌘
+                </span>
+                <span className="command-trigger-label">Search docs</span>
+              </button>
+              <nav aria-label="Chapters">
+                <ul className="summary-list">
+                  {graph.entries.map((entry) => (
+                    <SidebarEntry
+                      key={entry.id}
+                      entry={entry}
+                      config={config}
+                      activeChapterId={chapter.id}
+                    />
+                  ))}
+                </ul>
+              </nav>
+              {renderSidebarFooter(config)}
+            </div>
           </aside>
 
           <main className="content">

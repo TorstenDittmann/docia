@@ -527,6 +527,76 @@ function mountPageAiMenu(markdownHref: string, llmsHref: string): () => void {
   };
 }
 
+function mountMobileNav(): () => void {
+  const sidebar = document.querySelector<HTMLElement>(".sidebar");
+  const toggle = document.getElementById("gd-mobile-nav-toggle");
+  const panel = document.getElementById("gd-mobile-nav-panel");
+
+  if (
+    !(sidebar instanceof HTMLElement) ||
+    !(toggle instanceof HTMLButtonElement) ||
+    !(panel instanceof HTMLDivElement)
+  ) {
+    return () => {};
+  }
+
+  const cleanups: Array<() => void> = [];
+
+  const closeNav = (): void => {
+    sidebar.classList.remove("is-open");
+    toggle.setAttribute("aria-expanded", "false");
+  };
+
+  const openNav = (): void => {
+    sidebar.classList.add("is-open");
+    toggle.setAttribute("aria-expanded", "true");
+  };
+
+  const syncForViewport = (): void => {
+    if (window.matchMedia("(min-width: 961px)").matches) {
+      sidebar.classList.remove("is-open");
+      toggle.setAttribute("aria-expanded", "false");
+    }
+  };
+
+  addListener(cleanups, toggle, "click", () => {
+    if (sidebar.classList.contains("is-open")) {
+      closeNav();
+    } else {
+      openNav();
+    }
+  });
+
+  addListener(cleanups, panel, "click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    if (target.closest("a[href]") && window.matchMedia("(max-width: 960px)").matches) {
+      closeNav();
+    }
+  });
+
+  addListener(cleanups, document, "keydown", (event) => {
+    const keyboardEvent = event as KeyboardEvent;
+    if (keyboardEvent.key === "Escape" && sidebar.classList.contains("is-open")) {
+      closeNav();
+    }
+  });
+
+  addListener(cleanups, window, "resize", () => {
+    syncForViewport();
+  });
+
+  syncForViewport();
+
+  return () => {
+    closeNav();
+    cleanups.forEach((cleanup) => cleanup());
+  };
+}
+
 export function initSearch(): () => void {
   const basePath = readMetaContent("docia-base-path") ?? "/";
   const searchIndexHref =
@@ -539,8 +609,10 @@ export function initSearch(): () => void {
 
   const cleanupCommandMenu = mountCommandMenu(basePath, searchIndexHref);
   const cleanupPageAiMenu = mountPageAiMenu(markdownHref, llmsHref);
+  const cleanupMobileNav = mountMobileNav();
 
   return () => {
+    cleanupMobileNav();
     cleanupPageAiMenu();
     cleanupCommandMenu();
   };
