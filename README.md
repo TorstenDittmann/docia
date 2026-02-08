@@ -55,7 +55,7 @@ docia check
 
 ## Documentation
 
-Full documentation: [docia.dev](https://docia.dev) (built with docia)
+Full documentation: [docia.xyz](https://docia.xyz) (built with docia)
 
 Or run the docs locally:
 
