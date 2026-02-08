@@ -6,32 +6,32 @@ Example:
 
 ```ts
 export default {
-  srcDir: "book",
-  outDir: "dist",
-  publicDir: "public",
-  basePath: "/",
-  prettyUrls: true,
-  site: {
-    title: "My Docs",
-    description: "Product and API documentation",
-    language: "en",
-    url: "https://docs.example.com",
-    socials: {
-      github: "https://github.com/acme/docs",
-      x: "https://x.com/acme",
-    },
-    githubEditBaseUrl: "https://github.com/acme/docs/edit/main/book",
-    githubEditBranch: "main",
-    githubEditPath: "book",
-  },
-  markdown: {
-    headings: { ids: true },
-    autolinks: true,
-    tables: true,
-    tasklists: true,
-    strikethrough: true,
-    tagFilter: true,
-  },
+	srcDir: "book",
+	outDir: "dist",
+	publicDir: "public",
+	basePath: "/",
+	prettyUrls: true,
+	site: {
+		title: "My Docs",
+		description: "Product and API documentation",
+		language: "en",
+		url: "https://docs.example.com",
+		socials: {
+			github: "https://github.com/acme/docs",
+			x: "https://x.com/acme",
+		},
+		githubEditBaseUrl: "https://github.com/acme/docs/edit/main/book",
+		githubEditBranch: "main",
+		githubEditPath: "book",
+	},
+	markdown: {
+		headings: { ids: true },
+		autolinks: true,
+		tables: true,
+		tasklists: true,
+		strikethrough: true,
+		tagFilter: true,
+	},
 };
 ```
 

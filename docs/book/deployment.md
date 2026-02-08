@@ -24,7 +24,7 @@ Upload `dist/` to your hosting provider.
 If your site is hosted under a subpath (for example `/docs`), set:
 
 ```ts
-basePath: "/docs"
+basePath: "/docs";
 ```
 
 Then rebuild so generated links and metadata use the correct prefix.

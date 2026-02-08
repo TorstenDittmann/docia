@@ -10,16 +10,16 @@ This section walks through the default workflow.
 
 ```ts
 export default {
-  srcDir: "book",
-  outDir: "dist",
-  basePath: "/",
-  prettyUrls: true,
-  site: {
-    title: "Acme Docs",
-    description: "Internal engineering handbook",
-    language: "en",
-    url: "https://docs.acme.dev",
-  },
+	srcDir: "book",
+	outDir: "dist",
+	basePath: "/",
+	prettyUrls: true,
+	site: {
+		title: "Acme Docs",
+		description: "Internal engineering handbook",
+		language: "en",
+		url: "https://docs.acme.dev",
+	},
 };
 ```
 
