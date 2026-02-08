@@ -468,14 +468,17 @@ body.command-open {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.28rem;
-	font-size: 0.74rem;
+	font-size: 0.8rem;
 	padding: 0.34rem 0.5rem;
 }
 
 .page-ai-chevron {
-	font-size: 0.68rem;
+	font-size: 0.8rem;
 	padding: 0.34rem 0.38rem;
 	border-left: 1px solid var(--border);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .page-ai-copy:hover,
