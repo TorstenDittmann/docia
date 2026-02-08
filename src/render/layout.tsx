@@ -20,7 +20,7 @@ export interface RenderPageLayoutInput {
 	assets: RenderAssetManifest;
 }
 
-const DOCIA_GITHUB_URL = "https://github.com/dociajs/docia";
+const DOCIA_GITHUB_URL = "https://github.com/torstendittmann/docia";
 
 function IconGithub(): JSX.Element {
 	return (
