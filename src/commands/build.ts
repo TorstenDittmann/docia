@@ -1,5 +1,6 @@
 import type { CommandContext } from "../cli-types";
 import { buildSite } from "../build";
+import type { BuildProgressEvent } from "../build";
 import { loadConfig } from "../config/load-config";
 import { readStringFlag } from "../utils/args";
 import pc from "picocolors";
@@ -34,10 +35,109 @@ function value(text: string): string {
   return pc.white(text);
 }
 
+function progressLabel(phase: BuildProgressEvent["phase"]): string {
+  switch (phase) {
+    case "clean":
+      return "Cleaning output";
+    case "assets":
+      return "Bundling client assets";
+    case "pages":
+      return "Rendering pages";
+    case "search-seo":
+      return "Generating search + SEO";
+  }
+}
+
+interface BuildProgressReporter {
+  onProgress: (event: BuildProgressEvent) => void;
+  complete: () => void;
+}
+
+function createBuildProgressReporter(): BuildProgressReporter {
+  const isInteractive = Boolean(process.stdout.isTTY);
+  let pagesLineActive = false;
+  let lastPrintedPagePercent = 0;
+
+  const endPagesLine = (): void => {
+    if (!pagesLineActive) {
+      return;
+    }
+
+    process.stdout.write("\n");
+    pagesLineActive = false;
+  };
+
+  const writePageProgress = (current: number, total: number, force = false): void => {
+    const progressLine = `  ${pc.dim(">")} ${pc.cyan(progressLabel("pages"))} ${pc.bold(
+      `${current}/${total}`,
+    )}`;
+
+    if (isInteractive) {
+      process.stdout.write(`\r${progressLine}`);
+      pagesLineActive = true;
+      return;
+    }
+
+    if (force || total === 0) {
+      console.log(progressLine);
+      return;
+    }
+
+    const percent = Math.floor((current / total) * 100);
+    if (current === total || percent >= lastPrintedPagePercent + 10) {
+      console.log(progressLine);
+      lastPrintedPagePercent = percent;
+    }
+  };
+
+  return {
+    onProgress(event) {
+      if (event.phase !== "pages") {
+        if (event.status === "start") {
+          endPagesLine();
+          console.log(`  ${pc.dim(">")} ${pc.cyan(progressLabel(event.phase))} ${pc.dim("...")}`);
+        }
+        return;
+      }
+
+      if (event.status === "start") {
+        endPagesLine();
+        lastPrintedPagePercent = 0;
+        writePageProgress(0, event.total ?? 0, true);
+        return;
+      }
+
+      if (event.status === "progress") {
+        writePageProgress(event.current ?? 0, event.total ?? 0);
+        return;
+      }
+
+      if (event.status === "end") {
+        endPagesLine();
+      }
+    },
+    complete() {
+      endPagesLine();
+    },
+  };
+}
+
 export async function runBuildCommand(context: CommandContext): Promise<number> {
   const configFlag = readStringFlag(context.flags, "config", "c");
   const loaded = await loadConfig({ cwd: context.cwd, configFile: configFlag });
-  const result = await buildSite(loaded.config);
+  const progressReporter = createBuildProgressReporter();
+
+  console.log(`${pc.bold(pc.green("docia"))} ${pc.bold("build")} ${pc.dim("running...")}`);
+
+  const result = await (async () => {
+    try {
+      return await buildSite(loaded.config, {
+        onProgress: progressReporter.onProgress,
+      });
+    } finally {
+      progressReporter.complete();
+    }
+  })();
 
   const configSource =
     loaded.source === "file"
@@ -62,6 +162,7 @@ export async function runBuildCommand(context: CommandContext): Promise<number> 
   );
   console.log(`  ${key("Search docs")}${pc.green(String(result.searchDocumentCount))}`);
   console.log(`  ${key("Client assets")}${pc.green(String(result.clientAssetCount))}`);
+  console.log(`  ${key("Emitted files")}${pc.green(String(result.outputFiles.length))}`);
   console.log(
     `  ${key("Public assets")}${
       result.copiedPublicDir ? pc.green("copied") : pc.dim("none found")
@@ -86,12 +187,6 @@ export async function runBuildCommand(context: CommandContext): Promise<number> 
   console.log(
     `  ${key("Search + SEO")}${pc.yellow(formatDuration(result.timing.searchAndSeoMs))}`,
   );
-
-  console.log("");
-  console.log(section("Files"));
-  result.outputFiles.forEach((filePath) => {
-    console.log(`  ${pc.dim("•")} ${pc.blue(filePath)}`);
-  });
 
   return 0;
 }

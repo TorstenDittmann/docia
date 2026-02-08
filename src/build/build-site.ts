@@ -30,9 +30,20 @@ export interface BuildSiteResult {
   outputFiles: string[];
 }
 
+export type BuildProgressPhase = "clean" | "assets" | "pages" | "search-seo";
+export type BuildProgressStatus = "start" | "progress" | "end";
+
+export interface BuildProgressEvent {
+  phase: BuildProgressPhase;
+  status: BuildProgressStatus;
+  current?: number;
+  total?: number;
+}
+
 export interface BuildSiteOptions {
   minifyAssets?: boolean;
   sourcemapAssets?: Bun.BuildConfig["sourcemap"];
+  onProgress?: (event: BuildProgressEvent) => void;
 }
 
 async function isDirectory(pathValue: string): Promise<boolean> {
@@ -132,6 +143,10 @@ export async function buildSite(
   config: ResolvedConfig,
   options: BuildSiteOptions = {},
 ): Promise<BuildSiteResult> {
+  const emitProgress = (event: BuildProgressEvent): void => {
+    options.onProgress?.(event);
+  };
+
   const startedAt = Date.now();
   const graph = await loadSummaryGraph(config);
   const markdownEngine = await createMarkdownEngine(config);
@@ -143,6 +158,7 @@ export async function buildSite(
     relative(config.outDirAbsolute, absolutePath).split(sep).join("/");
 
   const cleanStartedAt = Date.now();
+  emitProgress({ phase: "clean", status: "start" });
   await rm(config.outDirAbsolute, { recursive: true, force: true });
   await mkdir(config.outDirAbsolute, { recursive: true });
 
@@ -150,9 +166,11 @@ export async function buildSite(
   if (copiedPublicDir) {
     await cp(config.publicDirAbsolute, config.outDirAbsolute, { recursive: true });
   }
+  emitProgress({ phase: "clean", status: "end" });
   const cleanMs = Date.now() - cleanStartedAt;
 
   const assetsStartedAt = Date.now();
+  emitProgress({ phase: "assets", status: "start" });
   const assets = await buildClientAssets(config, {
     minify: options.minifyAssets,
     sourcemap: options.sourcemapAssets,
@@ -160,10 +178,13 @@ export async function buildSite(
   assets.outputFiles.forEach((absolutePath) => {
     outputFiles.push(toRelativeOutputPath(absolutePath));
   });
+  emitProgress({ phase: "assets", status: "end" });
   const assetsMs = Date.now() - assetsStartedAt;
 
+  const totalPages = graph.chapters.length;
   const pagesStartedAt = Date.now();
-  for (const chapter of graph.chapters) {
+  emitProgress({ phase: "pages", status: "start", total: totalPages });
+  for (const [chapterIndex, chapter] of graph.chapters.entries()) {
     const chapterFile = Bun.file(chapter.sourceAbsolutePath);
     if (!(await chapterFile.exists())) {
       throw new CliError(
@@ -210,14 +231,24 @@ export async function buildSite(
     await Bun.write(markdownOutputPath, markdownSource);
     markdownMirrorCount += 1;
     outputFiles.push(`${chapter.outputPath}.md`);
+
+    emitProgress({
+      phase: "pages",
+      status: "progress",
+      current: chapterIndex + 1,
+      total: totalPages,
+    });
   }
+  emitProgress({ phase: "pages", status: "end", current: totalPages, total: totalPages });
   const pagesMs = Date.now() - pagesStartedAt;
 
   const searchAndSeoStartedAt = Date.now();
+  emitProgress({ phase: "search-seo", status: "start" });
   await emitSearchIndex(config.outDirAbsolute, searchEntries);
   outputFiles.push("search-index.json");
   const emittedSeoFiles = await emitSeoArtifacts(config, graph);
   outputFiles.push(...emittedSeoFiles);
+  emitProgress({ phase: "search-seo", status: "end" });
   const searchAndSeoMs = Date.now() - searchAndSeoStartedAt;
   const totalMs = Date.now() - startedAt;
 
