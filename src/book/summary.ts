@@ -16,6 +16,7 @@ const EXTERNAL_LINK_PATTERN = /^(?:[a-zA-Z][a-zA-Z0-9+.-]*:|#|\/\/)/;
 
 interface ParsedSummaryItem {
 	indentWidth: number;
+	depth: number;
 	line: number;
 	title: string;
 	href?: string;
@@ -33,6 +34,7 @@ function toLeadingSpaces(input: string): string {
 function parseSummaryItems(text: string): ParsedSummaryItem[] {
 	const lines = text.split(/\r?\n/);
 	const items: ParsedSummaryItem[] = [];
+	const indentLevels: number[] = [0];
 
 	for (let index = 0; index < lines.length; index += 1) {
 		const line = lines[index];
@@ -48,6 +50,28 @@ function parseSummaryItems(text: string): ParsedSummaryItem[] {
 		}
 
 		const indentWidth = indent.length;
+		let depth: number;
+
+		if (indentWidth === 0) {
+			depth = 0;
+		} else {
+			const lastIndent = indentLevels[indentLevels.length - 1] ?? 0;
+			if (indentWidth > lastIndent) {
+				indentLevels.push(indentWidth);
+				depth = indentLevels.length - 1;
+			} else {
+				while (indentLevels.length > 1 && (indentLevels[indentLevels.length - 1] ?? 0) > indentWidth) {
+					indentLevels.pop();
+				}
+				if (indentLevels[indentLevels.length - 1] !== indentWidth) {
+					throw new CliError(
+						`Invalid SUMMARY indentation at line ${index + 1}: inconsistent indentation (${indentWidth} spaces).`,
+					);
+				}
+				depth = indentLevels.length - 1;
+			}
+		}
+
 		const linkMatch = MARKDOWN_LINK_PATTERN.exec(raw);
 		if (linkMatch) {
 			const title = (linkMatch[1] ?? "").trim();
@@ -62,6 +86,7 @@ function parseSummaryItems(text: string): ParsedSummaryItem[] {
 
 			items.push({
 				indentWidth,
+				depth,
 				line: index + 1,
 				title,
 				href,
@@ -72,6 +97,7 @@ function parseSummaryItems(text: string): ParsedSummaryItem[] {
 
 		items.push({
 			indentWidth,
+			depth,
 			line: index + 1,
 			title: raw,
 		});
@@ -215,7 +241,7 @@ export async function loadSummaryGraph(config: ResolvedConfig): Promise<SummaryG
 	for (const item of items) {
 		while (stack.length > 0) {
 			const top = stack[stack.length - 1];
-			if (top && top.depth >= item.indentWidth) {
+			if (top && top.depth >= item.depth) {
 				stack.pop();
 				continue;
 			}
@@ -224,7 +250,7 @@ export async function loadSummaryGraph(config: ResolvedConfig): Promise<SummaryG
 		}
 
 		const parent = stack[stack.length - 1]?.entry;
-		if (!parent && item.indentWidth > 0) {
+		if (!parent && item.depth > 0) {
 			throw new CliError(
 				`Invalid SUMMARY nesting at line ${item.line}: indentation starts before a parent entry.`,
 			);
@@ -298,7 +324,7 @@ export async function loadSummaryGraph(config: ResolvedConfig): Promise<SummaryG
 		}
 
 		entryById.set(entry.id, entry);
-		stack.push({ depth: item.indentWidth, entry });
+		stack.push({ depth: item.depth, entry });
 	}
 
 	const chapters = flattenChapters(rootEntries);
