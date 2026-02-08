@@ -1,12 +1,15 @@
 {
   "name": "docia",
-  "version": "0.1.0",
+  "version": "0.0.2",
   "module": "src/cli.ts",
   "type": "module",
-  "private": true,
   "bin": {
     "docia": "./src/cli.ts"
   },
+  "files": [
+    "src",
+    "README.md"
+  ],
   "scripts": {
     "docia": "bun run src/cli.ts",
     "build": "bun run src/cli.ts build",

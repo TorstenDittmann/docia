@@ -15,7 +15,7 @@ const MARKDOWN_LINK_PATTERN = /^\[([^\]]+)\]\((.+)\)\s*$/;
 const EXTERNAL_LINK_PATTERN = /^(?:[a-zA-Z][a-zA-Z0-9+.-]*:|#|\/\/)/;
 
 interface ParsedSummaryItem {
-  depth: number;
+  indentWidth: number;
   line: number;
   title: string;
   href?: string;
@@ -47,7 +47,7 @@ function parseSummaryItems(text: string): ParsedSummaryItem[] {
       continue;
     }
 
-    const depth = Math.floor(indent.length / 2);
+    const indentWidth = indent.length;
     const linkMatch = MARKDOWN_LINK_PATTERN.exec(raw);
     if (linkMatch) {
       const title = (linkMatch[1] ?? "").trim();
@@ -61,7 +61,7 @@ function parseSummaryItems(text: string): ParsedSummaryItem[] {
       }
 
       items.push({
-        depth,
+        indentWidth,
         line: index + 1,
         title,
         href,
@@ -71,7 +71,7 @@ function parseSummaryItems(text: string): ParsedSummaryItem[] {
     }
 
     items.push({
-      depth,
+      indentWidth,
       line: index + 1,
       title: raw,
     });
@@ -215,7 +215,7 @@ export async function loadSummaryGraph(config: ResolvedConfig): Promise<SummaryG
   for (const item of items) {
     while (stack.length > 0) {
       const top = stack[stack.length - 1];
-      if (top && top.depth >= item.depth) {
+      if (top && top.depth >= item.indentWidth) {
         stack.pop();
         continue;
       }
@@ -224,17 +224,13 @@ export async function loadSummaryGraph(config: ResolvedConfig): Promise<SummaryG
     }
 
     const parent = stack[stack.length - 1]?.entry;
-    if (!parent && item.depth > 0) {
+    if (!parent && item.indentWidth > 0) {
       throw new CliError(
         `Invalid SUMMARY nesting at line ${item.line}: indentation starts before a parent entry.`,
       );
     }
 
-    if (parent && item.depth > parent.depth + 1) {
-      throw new CliError(
-        `Invalid SUMMARY nesting at line ${item.line}: indentation jumps more than one level.`,
-      );
-    }
+    const depth = parent ? parent.depth + 1 : 0;
 
     let entry: SummaryEntry;
 
@@ -243,7 +239,7 @@ export async function loadSummaryGraph(config: ResolvedConfig): Promise<SummaryG
         id: createEntryId("section", item.line),
         kind: "section",
         title: item.title,
-        depth: item.depth,
+        depth,
         line: item.line,
         parentId: parent?.id ?? null,
         children: [],
@@ -256,7 +252,7 @@ export async function loadSummaryGraph(config: ResolvedConfig): Promise<SummaryG
         title: item.title,
         href: item.href,
         external: isExternalLink(item.href),
-        depth: item.depth,
+        depth,
         line: item.line,
         parentId: parent?.id ?? null,
         children: [],
@@ -282,7 +278,7 @@ export async function loadSummaryGraph(config: ResolvedConfig): Promise<SummaryG
         sourceAbsolutePath,
         routePath: toRoutePath(sourcePath, config.prettyUrls),
         outputPath: toOutputPath(sourcePath, config.prettyUrls),
-        depth: item.depth,
+        depth,
         line: item.line,
         parentId: parent?.id ?? null,
         children: [],
@@ -302,7 +298,7 @@ export async function loadSummaryGraph(config: ResolvedConfig): Promise<SummaryG
     }
 
     entryById.set(entry.id, entry);
-    stack.push({ depth: item.depth, entry });
+    stack.push({ depth: item.indentWidth, entry });
   }
 
   const chapters = flattenChapters(rootEntries);

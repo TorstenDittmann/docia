@@ -134,6 +134,19 @@ function resolveCanonicalUrl(config: ResolvedConfig, routePath: string): string 
   }
 }
 
+function resolveAbsoluteUrl(config: ResolvedConfig, href: string): string | null {
+  const siteUrl = config.site.url.trim();
+  if (siteUrl.length === 0) {
+    return null;
+  }
+
+  try {
+    return new URL(href, siteUrl).toString();
+  } catch {
+    return null;
+  }
+}
+
 function toJsonScript(value: unknown): string {
   return JSON.stringify(value).replace(/</g, "\\u003c");
 }
@@ -387,6 +400,8 @@ function Head(props: {
   const pageTitle = `${props.chapter.title} - ${siteTitle}`;
   const canonical = resolveCanonicalUrl(props.config, props.chapter.routePath);
   const description = resolveMetaDescription(props.config, props.pageDescription);
+  const ogImageHref = toBasePathHref(props.config.basePath, "/og-image.svg");
+  const ogImageUrl = resolveAbsoluteUrl(props.config, ogImageHref) ?? ogImageHref;
 
   const searchIndexHref = toBasePathHref(props.config.basePath, "/search-index.json");
   const llmsHref = toBasePathHref(props.config.basePath, "/llms.txt");
@@ -423,9 +438,18 @@ function Head(props: {
       <meta name="theme-color" content="#0f172a" />
       <meta name="robots" content="index,follow" />
       <meta property="og:type" content="article" />
+      <meta property="og:site_name" content={siteTitle} />
       <meta property="og:title" content={pageTitle} />
+      <meta property="og:image" content={ogImageUrl} />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content={pageTitle} />
+      <meta name="twitter:image" content={ogImageUrl} />
       {description.length > 0 ? <meta name="description" content={description} /> : null}
+      {description.length > 0 ? <meta property="og:description" content={description} /> : null}
+      {description.length > 0 ? <meta name="twitter:description" content={description} /> : null}
+      <link rel="icon" type="image/svg+xml" href={toBasePathHref(props.config.basePath, "/favicon.svg")} />
       {canonical ? <link rel="canonical" href={canonical} /> : null}
+      {canonical ? <meta property="og:url" content={canonical} /> : null}
       {props.assets.stylesheetHref ? (
         <link rel="stylesheet" href={props.assets.stylesheetHref} />
       ) : null}
