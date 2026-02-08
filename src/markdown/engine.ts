@@ -31,6 +31,19 @@ const SHIKI_LANGUAGES = [
 	"yaml",
 ] as const;
 
+// Singleton highlighter instance cached across rebuilds
+let highlighterPromise: Promise<Highlighter> | null = null;
+
+async function getHighlighter(): Promise<Highlighter> {
+	if (highlighterPromise === null) {
+		highlighterPromise = createHighlighter({
+			themes: [SHIKI_THEMES.light, SHIKI_THEMES.dark],
+			langs: [...SHIKI_LANGUAGES],
+		});
+	}
+	return highlighterPromise;
+}
+
 const LANGUAGE_ALIASES: Record<string, string> = {
 	cjs: "javascript",
 	docker: "dockerfile",
@@ -87,7 +100,8 @@ function decodeHtmlEntities(input: string): string {
 		.replace(/&lt;/g, "<")
 		.replace(/&gt;/g, ">")
 		.replace(/&quot;/g, '"')
-		.replace(/&#39;/g, "'");
+		.replace(/&#39;/g, "'")
+		.replace(/&#x27;/gi, "'");
 }
 
 function extractLanguageFromAttributes(attributes: string): string | null {
@@ -161,10 +175,7 @@ export async function createMarkdownEngine(config: ResolvedConfig): Promise<Mark
 		...config.markdown,
 	};
 
-	const highlighter = await createHighlighter({
-		themes: [SHIKI_THEMES.light, SHIKI_THEMES.dark],
-		langs: [...SHIKI_LANGUAGES],
-	});
+	const highlighter = await getHighlighter();
 
 	const renderHtml = (markdown: string): string => {
 		const markdownElement = Bun.markdown.react(markdown, undefined, {

@@ -122,7 +122,8 @@ export async function startDevServer(options: DevServerOptions): Promise<void> {
 		clearWatchers();
 
 		await watchPath(config.srcDirAbsolute, true);
-		await watchPath(config.publicDirAbsolute, true);
+		// Note: publicDir is NOT watched because cp() reads files which updates
+		// access times and triggers watcher events, causing infinite rebuild loops.
 
 		if (config.configFilePath) {
 			await watchPath(config.configFilePath, false);
