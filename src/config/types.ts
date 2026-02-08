@@ -9,6 +9,7 @@ export interface SiteConfig {
 	language: string;
 	url: string;
 	socials: SiteSocialsConfig;
+	ogImage: string;
 	githubEditBaseUrl: string;
 	githubEditBranch: string;
 	githubEditPath: string;

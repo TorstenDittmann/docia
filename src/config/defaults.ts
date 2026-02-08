@@ -18,6 +18,7 @@ export const DEFAULT_CONFIG: GoodDocsConfig = {
 		language: "en",
 		url: "",
 		socials: {},
+		ogImage: "/og.png",
 		githubEditBaseUrl: "",
 		githubEditBranch: "main",
 		githubEditPath: "",

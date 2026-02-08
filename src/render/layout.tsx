@@ -414,7 +414,7 @@ function Head(props: {
 	const pageTitle = `${props.chapter.title} - ${siteTitle}`;
 	const canonical = resolveCanonicalUrl(props.config, props.chapter.routePath);
 	const description = resolveMetaDescription(props.config, props.pageDescription);
-	const ogImageHref = toBasePathHref(props.config.basePath, "/og-image.svg");
+	const ogImageHref = toBasePathHref(props.config.basePath, props.config.site.ogImage);
 	const ogImageUrl = resolveAbsoluteUrl(props.config, ogImageHref) ?? ogImageHref;
 
 	const searchIndexHref = toBasePathHref(props.config.basePath, "/search-index.json");
