@@ -465,6 +465,7 @@ function Head(props: {
 			{description.length > 0 ? (
 				<meta name="twitter:description" content={description} />
 			) : null}
+			<link rel="preload" href={searchIndexHref} as="fetch" crossOrigin="anonymous" />
 			<link
 				rel="icon"
 				type="image/svg+xml"

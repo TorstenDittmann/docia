@@ -1,8 +1,9 @@
-/// <reference lib="dom" />
+import MiniSearch from "minisearch";
 
 const NAVIGATE_EVENT_NAME = "docia:navigate";
 
 interface SearchIndexPage {
+	id: string;
 	title?: string;
 	routePath?: string;
 	text?: string;
@@ -16,6 +17,7 @@ interface SearchResultItem {
 	title: string;
 	href: string;
 	snippet: string;
+	terms: string[];
 }
 
 function readMetaContent(name: string): string | null {
@@ -71,43 +73,64 @@ function toAbsoluteUrl(input: string): string {
 	}
 }
 
-function scorePage(page: SearchIndexPage, tokens: string[]): number {
-	const title = (page.title ?? "").toLowerCase();
-	const text = (page.text ?? "").toLowerCase();
-
-	let score = 0;
-	for (const token of tokens) {
-		if (title.includes(token)) {
-			score += 8;
-		}
-
-		if (text.includes(token)) {
-			score += 2;
-		}
-	}
-
-	return score;
-}
-
-function makeSnippet(text: string, tokens: string[]): string {
+function makeSnippet(text: string, terms: string[], maxLength = 170): string {
 	const source = text.replace(/\s+/g, " ").trim();
 	if (source.length === 0) {
 		return "";
 	}
 
-	const lower = source.toLowerCase();
-	let start = 0;
+	if (terms.length === 0) {
+		const snippet = source.slice(0, maxLength);
+		return snippet.length < source.length ? `${snippet}...` : snippet;
+	}
 
-	for (const token of tokens) {
-		const index = lower.indexOf(token);
+	// Find the first occurrence of any term
+	const lowerSource = source.toLowerCase();
+	let bestIndex = 0;
+	let found = false;
+
+	for (const term of terms) {
+		const index = lowerSource.indexOf(term.toLowerCase());
 		if (index >= 0) {
-			start = Math.max(0, index - 45);
+			bestIndex = index;
+			found = true;
 			break;
 		}
 	}
 
-	const snippet = source.slice(start, start + 170);
-	return start > 0 ? `...${snippet}` : snippet;
+	// Calculate snippet window with padding around the match
+	const padding = 60;
+	let start = found ? Math.max(0, bestIndex - padding) : 0;
+	let end = Math.min(source.length, start + maxLength);
+
+	// Adjust if we're at the end
+	if (end - start < maxLength && source.length > maxLength) {
+		start = Math.max(0, end - maxLength);
+	}
+
+	const snippet = source.slice(start, end);
+	const prefix = start > 0 ? "..." : "";
+	const suffix = end < source.length ? "..." : "";
+
+	return `${prefix}${snippet}${suffix}`;
+}
+
+function highlightText(text: string, terms: string[]): string {
+	if (terms.length === 0) {
+		return escapeHtml(text);
+	}
+
+	// Escape HTML first
+	let escaped = escapeHtml(text);
+
+	// Sort terms by length (longest first) to avoid partial replacements
+	const sortedTerms = [...terms].sort((a, b) => b.length - a.length);
+
+	// Create a regex that matches any of the terms (case-insensitive)
+	const escapedTerms = sortedTerms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+	const pattern = new RegExp(`(${escapedTerms.join("|")})`, "gi");
+
+	return escaped.replace(pattern, "<mark>$1</mark>");
 }
 
 async function copyToClipboard(text: string): Promise<boolean> {
@@ -154,6 +177,18 @@ function dispatchNavigate(href: string): void {
 	);
 }
 
+function createMiniSearch(): MiniSearch<SearchIndexPage> {
+	return new MiniSearch({
+		fields: ["title", "text"],
+		storeFields: ["id", "title", "routePath", "text"],
+		searchOptions: {
+			boost: { title: 2.5 },
+			fuzzy: 0.25,
+			prefix: true,
+		},
+	});
+}
+
 function mountCommandMenu(basePath: string, searchIndexHref: string): () => void {
 	const trigger = document.getElementById("gd-command-trigger");
 	const overlay = document.getElementById("gd-command-overlay");
@@ -170,14 +205,14 @@ function mountCommandMenu(basePath: string, searchIndexHref: string): () => void
 	}
 
 	const cleanups: Array<() => void> = [];
-	let pages: SearchIndexPage[] | null = null;
-	let loadingPromise: Promise<SearchIndexPage[]> | null = null;
+	let miniSearch: MiniSearch<SearchIndexPage> | null = null;
+	let loadingPromise: Promise<MiniSearch<SearchIndexPage>> | null = null;
 	let displayedItems: SearchResultItem[] = [];
 	let activeIndex = -1;
 
-	const ensureIndex = async (): Promise<SearchIndexPage[]> => {
-		if (pages !== null) {
-			return pages;
+	const ensureIndex = async (): Promise<MiniSearch<SearchIndexPage>> => {
+		if (miniSearch !== null) {
+			return miniSearch;
 		}
 
 		if (loadingPromise) {
@@ -185,19 +220,28 @@ function mountCommandMenu(basePath: string, searchIndexHref: string): () => void
 		}
 
 		loadingPromise = (async () => {
+			const searchInstance = createMiniSearch();
+
 			try {
 				const response = await fetch(searchIndexHref, { cache: "no-store" });
 				if (!response.ok) {
-					pages = [];
-					return pages;
+					miniSearch = searchInstance;
+					return miniSearch;
 				}
 
 				const payload = (await response.json()) as SearchIndexPayload;
-				pages = Array.isArray(payload.pages) ? payload.pages : [];
-				return pages;
+				const pages = Array.isArray(payload.pages) ? payload.pages : [];
+
+				// Add documents to MiniSearch index
+				if (pages.length > 0) {
+					searchInstance.addAll(pages);
+				}
+
+				miniSearch = searchInstance;
+				return miniSearch;
 			} catch {
-				pages = [];
-				return pages;
+				miniSearch = searchInstance;
+				return miniSearch;
 			} finally {
 				loadingPromise = null;
 			}
@@ -218,60 +262,79 @@ function mountCommandMenu(basePath: string, searchIndexHref: string): () => void
 		}
 	};
 
-	const renderEmpty = (message: string): void => {
+	const renderEmptyState = (hasQuery: boolean): void => {
 		displayedItems = [];
 		activeIndex = -1;
+		const message = hasQuery
+			? "No matches found"
+			: "Type to search documentation or press ↑↓ to browse";
 		results.innerHTML = `<li><div class="command-empty">${escapeHtml(message)}</div></li>`;
 	};
 
-	const renderItems = (items: SearchResultItem[]): void => {
+	const renderItems = (items: SearchResultItem[], query: string): void => {
 		displayedItems = items;
+		const trimmedQuery = query.trim();
+		const hasQuery = trimmedQuery.length > 0;
+
 		if (items.length === 0) {
-			renderEmpty("No matches");
+			renderEmptyState(hasQuery);
 			return;
 		}
 
 		results.innerHTML = items
-			.map(
-				(item, index) =>
-					`<li data-index="${index}"><a href="${escapeHtml(item.href)}" data-index="${index}"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.snippet)}</small></a></li>`,
-			)
+			.map((item, index) => {
+				const highlightedTitle = highlightText(item.title, item.terms);
+				const highlightedSnippet = highlightText(item.snippet, item.terms);
+				return `<li data-index="${index}"><a href="${escapeHtml(item.href)}" data-index="${index}"><strong>${highlightedTitle}</strong><small>${highlightedSnippet}</small></a></li>`;
+			})
 			.join("");
 
 		activeIndex = 0;
 		updateActiveItem();
 	};
 
-	const buildItems = (candidatePages: SearchIndexPage[], query: string): SearchResultItem[] => {
-		const normalized = query.trim().toLowerCase();
-		const tokens = normalized.split(/\s+/).filter(Boolean);
+	const buildItems = (
+		searchInstance: MiniSearch<SearchIndexPage>,
+		query: string,
+	): SearchResultItem[] => {
+		const trimmedQuery = query.trim();
 
-		const ranked =
-			tokens.length === 0
-				? candidatePages.slice(0, 10).map((page) => ({ page, score: 1 }))
-				: candidatePages
-						.map((page) => ({ page, score: scorePage(page, tokens) }))
-						.filter((item) => item.score > 0)
-						.sort((left, right) => right.score - left.score)
-						.slice(0, 10);
+		// If no query, show all pages sorted alphabetically by title
+		if (trimmedQuery.length === 0) {
+			const allPages = searchInstance.documentCount > 0 ? searchInstance.search("") : [];
+			return allPages.slice(0, 10).map((result) => {
+				const page = result as unknown as SearchIndexPage;
+				return {
+					title: page.title?.trim() || "Untitled",
+					href: toBasePathHref(basePath, page.routePath ?? "/"),
+					snippet: makeSnippet(page.text ?? "", []) || page.routePath || "",
+					terms: [],
+				};
+			});
+		}
 
-		return ranked.map(({ page }) => {
-			const title = (page.title ?? "Untitled").trim() || "Untitled";
-			const href = toBasePathHref(basePath, page.routePath ?? "/");
-			const snippet = makeSnippet(page.text ?? "", tokens) || href;
+		// Use MiniSearch for fuzzy, prefix, and TF-IDF ranked search
+		const searchResults = searchInstance.search(trimmedQuery);
 
+		return searchResults.slice(0, 10).map((result) => {
+			const page = result as unknown as SearchIndexPage;
+			// Get match info from MiniSearch result
+			const match = (result as { match?: Record<string, string[]> }).match;
+			// Extract all matched terms from the match object (keys are the terms)
+			const terms = match ? Object.keys(match) : [];
 			return {
-				title,
-				href,
-				snippet,
+				title: page.title?.trim() || "Untitled",
+				href: toBasePathHref(basePath, page.routePath ?? "/"),
+				snippet: makeSnippet(page.text ?? "", terms) || page.routePath || "",
+				terms,
 			};
 		});
 	};
 
 	const refreshResults = async (): Promise<void> => {
 		const query = input.value;
-		const index = await ensureIndex();
-		renderItems(buildItems(index, query));
+		const searchInstance = await ensureIndex();
+		renderItems(buildItems(searchInstance, query), query);
 	};
 
 	const closeMenu = (): void => {
