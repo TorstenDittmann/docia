@@ -8,4 +8,3 @@
 - [CLI Reference](cli-reference.md)
 - [LLM Features](llm-features.md)
 - [Deployment](deployment.md)
-- [Migrate from mdBook](migration-from-mdbook.md)

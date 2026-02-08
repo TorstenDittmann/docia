@@ -1,71 +1,75 @@
 # docia
 
-SEO-first static docs generator in Bun, inspired by mdBook.
+> Documentation that works. For humans. And machines.
 
-## Install
+Generate beautiful, fast, SEO-ready documentation sites from Markdown.
+
+## Features
+
+- **Fast development** — Live reload on every save
+- **SEO-first** — Sitemap, structured data, canonical URLs, robots.txt out of the box
+- **Clean navigation** — Simple chapter structure via `SUMMARY.md`
+- **LLM-ready** — `llms.txt` + per-page markdown for AI assistants
+- **Static export** — Host anywhere (Vercel, Netlify, GitHub Pages, S3)
+
+## Quick Start
 
 ```bash
-bun install
+# Create a new docs project
+bunx docia init my-docs
+cd my-docs
+
+# Start development server
+bunx docia dev
 ```
 
-## CLI
+Your docs will be available at `http://localhost:3000`.
+
+## Installation
+
+**Requirements:** Bun 1.3+
 
 ```bash
-bun run src/cli.ts --help
+# Install globally
+bun install -g docia
+
+# Or use directly with bunx
+bunx docia --help
+```
+
+## Usage
+
+```bash
+# Initialize a new project
+docia init my-docs
+
+# Development with live reload
+docia dev
+
+# Build for production
+docia build
+
+# Validate before deploy
+docia check
 ```
 
 ## Documentation
 
-Project usage docs are written with `docia` itself in `docs/book`.
+Full documentation: [docia.dev](https://docia.dev) (built with docia)
 
-Run the docs locally:
+Or run the docs locally:
 
 ```bash
+git clone https://github.com/yourusername/docia
+cd docia
+bun install
 bun run src/cli.ts dev --config docs/docia.config.ts
 ```
 
-Build docs output:
+## Example
 
-```bash
-bun run src/cli.ts build --config docs/docia.config.ts
-```
+See `examples/team-handbook/` for a complete documentation site example.
 
-### Commands
+## Contributing
 
-- `bun run src/cli.ts init`
-- `bun run src/cli.ts build`
-- `bun run src/cli.ts dev`
-- `bun run src/cli.ts serve`
-- `bun run src/cli.ts check`
-- `bun run src/cli.ts new <chapter-name>`
-
-`dev` runs an initial build, serves `dist/`, and rebuilds on file changes.
-
-## Example Project
-
-See `examples/team-handbook` for a complete docs sample.
-
-```bash
-bun run src/cli.ts build --config examples/team-handbook/docia.config.ts
-bun run src/cli.ts serve --config examples/team-handbook/docia.config.ts --build
-```
-
-## Status
-
-Foundation is in progress:
-
-- CLI command skeleton
-- Config loading and validation (`docia.config.ts`)
-- Project scaffolding via `init`
-- `SUMMARY.md` parser + chapter graph (nesting, prev/next)
-- Bun-native Markdown rendering (`Bun.markdown.html/render`)
-- Client assets bundled with `Bun.build` (JS + CSS loaders)
-- Static HTML build output with sidebar, TOC, and pagination
-- SPA-style client routing after first page load
-- Shiki build-time syntax highlighting for code blocks
-- Build-time JSX page rendering (Preact SSR, no hydration required)
-- Basic SEO output (`canonical`, meta description, JSON-LD, `robots.txt`, `llms.txt`)
-- LLM-friendly page actions (copy markdown, view markdown, open in ChatGPT/Claude)
-- Sidebar socials, "Powered by docsia", and optional GitHub edit links
-- `dev` and `serve` on `Bun.serve()`
-- `check` validations for missing files, duplicate routes/output paths, broken markdown links, and orphan markdown files
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup and contribution guidelines.
