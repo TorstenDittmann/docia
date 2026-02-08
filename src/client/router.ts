@@ -102,8 +102,100 @@ function scrollToHash(hash: string): void {
   window.scrollTo({ top: 0, left: 0, behavior: "auto" });
 }
 
+const PREFETCH_CACHE_SIZE = 10;
+
+class PrefetchCache {
+  private cache = new Map<string, string>();
+  private maxSize: number;
+
+  constructor(maxSize: number) {
+    this.maxSize = maxSize;
+  }
+
+  get(key: string): string | undefined {
+    const value = this.cache.get(key);
+    if (value !== undefined) {
+      this.cache.delete(key);
+      this.cache.set(key, value);
+    }
+    return value;
+  }
+
+  set(key: string, value: string): void {
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
+    }
+    this.cache.set(key, value);
+  }
+
+  has(key: string): boolean {
+    return this.cache.has(key);
+  }
+}
+
 export function initSpaRouter(options: SpaRouterOptions = {}): () => void {
   let navigationRequestId = 0;
+  const prefetchCache = new PrefetchCache(PREFETCH_CACHE_SIZE);
+
+  const shouldPrefetchUrl = (url: URL): boolean => {
+    if (url.origin !== window.location.origin) {
+      return false;
+    }
+
+    if (isSamePageHashNavigation(url)) {
+      return false;
+    }
+
+    if (isLikelyAssetPath(url.pathname) && !url.pathname.endsWith(".md")) {
+      return false;
+    }
+
+    return true;
+  };
+
+  const prefetch = async (targetUrl: URL): Promise<void> => {
+    const url = new URL(targetUrl.toString());
+    url.pathname = normalizeMarkdownMirrorPath(url.pathname);
+
+    if (!shouldPrefetchUrl(url)) {
+      return;
+    }
+
+    if (prefetchCache.has(url.pathname)) {
+      return;
+    }
+
+    const connection = (navigator as { connection?: { saveData?: boolean } }).connection;
+    if (connection?.saveData === true) {
+      return;
+    }
+
+    try {
+      const response = await fetch(url.toString(), {
+        headers: {
+          Accept: "text/html",
+        },
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const contentType = response.headers.get("content-type") ?? "";
+      if (!contentType.includes("text/html")) {
+        return;
+      }
+
+      const html = await response.text();
+      prefetchCache.set(url.pathname, html);
+    } catch {
+    }
+  };
 
   const navigate = async (targetUrl: URL, navigateOptions: NavigateOptions = {}): Promise<void> => {
     const url = new URL(targetUrl.toString());
@@ -124,24 +216,31 @@ export function initSpaRouter(options: SpaRouterOptions = {}): () => void {
     navigationRequestId = requestId;
 
     try {
-      const response = await fetch(url.toString(), {
-        headers: {
-          Accept: "text/html",
-        },
-      });
+      const cachedHtml = prefetchCache.get(url.pathname);
+      let html: string;
 
-      if (!response.ok) {
-        window.location.assign(url.toString());
-        return;
+      if (cachedHtml !== undefined) {
+        html = cachedHtml;
+      } else {
+        const response = await fetch(url.toString(), {
+          headers: {
+            Accept: "text/html",
+          },
+        });
+
+        if (!response.ok) {
+          window.location.assign(url.toString());
+          return;
+        }
+
+        const contentType = response.headers.get("content-type") ?? "";
+        if (!contentType.includes("text/html")) {
+          window.location.assign(url.toString());
+          return;
+        }
+
+        html = await response.text();
       }
-
-      const contentType = response.headers.get("content-type") ?? "";
-      if (!contentType.includes("text/html")) {
-        window.location.assign(url.toString());
-        return;
-      }
-
-      const html = await response.text();
       if (navigationRequestId !== requestId) {
         return;
       }
@@ -229,12 +328,62 @@ export function initSpaRouter(options: SpaRouterOptions = {}): () => void {
     });
   };
 
+  const onLinkHover = (event: MouseEvent): void => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    const anchor = target.closest<HTMLAnchorElement>("a[href]");
+    if (!anchor) {
+      return;
+    }
+
+    if (anchor.target && anchor.target !== "_self") {
+      return;
+    }
+
+    if (anchor.hasAttribute("download") || anchor.getAttribute("rel") === "external") {
+      return;
+    }
+
+    const url = new URL(anchor.href, window.location.href);
+    void prefetch(url);
+  };
+
+  const onLinkTouch = (event: TouchEvent): void => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    const anchor = target.closest<HTMLAnchorElement>("a[href]");
+    if (!anchor) {
+      return;
+    }
+
+    if (anchor.target && anchor.target !== "_self") {
+      return;
+    }
+
+    if (anchor.hasAttribute("download") || anchor.getAttribute("rel") === "external") {
+      return;
+    }
+
+    const url = new URL(anchor.href, window.location.href);
+    void prefetch(url);
+  };
+
   document.addEventListener("click", onDocumentClick);
+  document.addEventListener("mouseenter", onLinkHover, true);
+  document.addEventListener("touchstart", onLinkTouch, true);
   window.addEventListener("popstate", onPopState);
   window.addEventListener(NAVIGATE_EVENT_NAME, onProgrammaticNavigate as EventListener);
 
   return () => {
     document.removeEventListener("click", onDocumentClick);
+    document.removeEventListener("mouseenter", onLinkHover, true);
+    document.removeEventListener("touchstart", onLinkTouch, true);
     window.removeEventListener("popstate", onPopState);
     window.removeEventListener(
       NAVIGATE_EVENT_NAME,
