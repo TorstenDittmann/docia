@@ -8,6 +8,7 @@ It is designed for:
 - fast local development with rebuild-on-change
 - simple chapter navigation using `SUMMARY.md`
 - LLM-friendly docs output (`llms.txt` + per-page markdown)
+- build-time JSX page rendering with Preact SSR
 
 ## Build this guide
 

@@ -1,11 +1,12 @@
 import { createHighlighter, type Highlighter } from "shiki";
+import { renderToStaticMarkup } from "react-dom/server";
 import type { ResolvedConfig } from "../config/types";
 import { stripHtml } from "../utils/html";
 
 type ParserOptions = NonNullable<Parameters<typeof Bun.markdown.html>[1]>;
 
 const HEADING_PATTERN = /<h([1-6])([^>]*)>([\s\S]*?)<\/h\1>/gi;
-const CODE_BLOCK_PATTERN = /<pre><code([^>]*)>([\s\S]*?)<\/code><\/pre>/gi;
+const CODE_BLOCK_PATTERN = /<pre([^>]*)>([\s\S]*?)<\/pre>/gi;
 
 const SHIKI_THEMES = {
   light: "github-light",
@@ -90,6 +91,12 @@ function decodeHtmlEntities(input: string): string {
 }
 
 function extractLanguageFromAttributes(attributes: string): string | null {
+  const languageAttrMatch = /\blanguage=(?:"([^"]+)"|'([^']+)')/i.exec(attributes);
+  const languageAttr = languageAttrMatch?.[1] ?? languageAttrMatch?.[2] ?? "";
+  if (languageAttr.length > 0) {
+    return languageAttr;
+  }
+
   const classMatch = /\bclass=(?:"([^"]+)"|'([^']+)')/i.exec(attributes);
   const classNameValue = classMatch?.[1] ?? classMatch?.[2] ?? "";
 
@@ -128,9 +135,15 @@ function normalizeLanguageName(language: string | null, highlighter: Highlighter
 
 function highlightCodeBlocks(html: string, highlighter: Highlighter): string {
   return html.replace(CODE_BLOCK_PATTERN, (fullMatch, attributes, encodedCode) => {
-    const rawLanguage = extractLanguageFromAttributes(String(attributes));
+    const codeBody = String(encodedCode ?? "");
+
+    if (/<\/?[a-z][^>]*>/i.test(codeBody)) {
+      return fullMatch;
+    }
+
+    const rawLanguage = extractLanguageFromAttributes(String(attributes ?? ""));
     const language = normalizeLanguageName(rawLanguage, highlighter);
-    const code = decodeHtmlEntities(String(encodedCode));
+    const code = decodeHtmlEntities(codeBody);
 
     try {
       return highlighter.codeToHtml(code, {
@@ -156,7 +169,12 @@ export async function createMarkdownEngine(
   });
 
   const renderHtml = (markdown: string): string => {
-    const rawHtml = Bun.markdown.html(markdown, parserOptions);
+    const markdownElement = Bun.markdown.react(markdown, undefined, {
+      ...parserOptions,
+      reactVersion: 19,
+    });
+
+    const rawHtml = renderToStaticMarkup(markdownElement);
     return highlightCodeBlocks(rawHtml, highlighter);
   };
 

@@ -63,6 +63,7 @@ Foundation is in progress:
 - Static HTML build output with sidebar, TOC, and pagination
 - SPA-style client routing after first page load
 - Shiki build-time syntax highlighting for code blocks
+- Build-time JSX page rendering (Preact SSR, no hydration required)
 - Basic SEO output (`canonical`, meta description, JSON-LD, `robots.txt`, `llms.txt`)
 - LLM-friendly page actions (copy markdown, view markdown, open in ChatGPT/Claude)
 - Sidebar socials, "Powered by docsia", and optional GitHub edit links

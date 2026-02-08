@@ -86,8 +86,12 @@ Link back to [Intro](README.md).
     expect(indexHtml).toContain("<link rel=\"canonical\"");
     expect(indexHtml).toContain("id=\"gd-command-input\"");
 
-    const stylesheetMatch = /<link rel="stylesheet" href="([^"]+\.css)">/.exec(indexHtml);
-    const scriptMatch = /<script type="module" src="([^"]+\.js)"><\/script>/.exec(indexHtml);
+    const stylesheetMatch = /<link\s+rel="stylesheet"\s+href="([^"]+\.css)"\s*\/?>/.exec(
+      indexHtml,
+    );
+    const scriptMatch = /<script\s+type="module"\s+src="([^"]+\.js)"\s*><\/script>/.exec(
+      indexHtml,
+    );
 
     expect(stylesheetMatch?.[1]).toBeDefined();
     expect(scriptMatch?.[1]).toBeDefined();
