@@ -1,4 +1,6 @@
-export default {
+import { defineConfig } from "../../src/index";
+
+export default defineConfig({
 	srcDir: "examples/team-handbook/book",
 	outDir: "examples/team-handbook/dist",
 	publicDir: "examples/team-handbook/public",
@@ -18,4 +20,4 @@ export default {
 		githubEditBranch: "main",
 		githubEditPath: "",
 	},
-};
+});
