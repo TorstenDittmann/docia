@@ -267,7 +267,17 @@ a {
 .command-results .command-empty {
 	color: var(--text-muted);
 	font-size: 0.8rem;
-	border: 1px dashed var(--border);
+	padding: 1.5rem 1rem;
+	text-align: center;
+	font-style: italic;
+}
+
+.command-results mark {
+	background: var(--accent-soft);
+	color: var(--accent);
+	font-weight: 600;
+	padding: 0 0.15rem;
+	border-radius: 3px;
 }
 
 .command-footer {
