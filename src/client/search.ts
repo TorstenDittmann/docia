@@ -133,29 +133,6 @@ function highlightText(text: string, terms: string[]): string {
 	return escaped.replace(pattern, "<mark>$1</mark>");
 }
 
-async function copyToClipboard(text: string): Promise<boolean> {
-	if (navigator.clipboard?.writeText) {
-		await navigator.clipboard.writeText(text);
-		return true;
-	}
-
-	const textArea = document.createElement("textarea");
-	textArea.value = text;
-	textArea.style.position = "fixed";
-	textArea.style.left = "-9999px";
-	document.body.append(textArea);
-	textArea.select();
-
-	let copied = false;
-	try {
-		copied = document.execCommand("copy");
-	} finally {
-		textArea.remove();
-	}
-
-	return copied;
-}
-
 function addListener(
 	cleanups: Array<() => void>,
 	target: EventTarget,
@@ -501,9 +478,35 @@ function mountPageAiMenu(markdownHref: string, llmsHref: string): () => void {
 		trigger.setAttribute("aria-expanded", "false");
 	};
 
+	let cachedMarkdown: string | null = null;
+	let isLoadingMarkdown = false;
+
 	const openMenu = (): void => {
 		menu.hidden = false;
 		trigger.setAttribute("aria-expanded", "true");
+
+		// Prefetch markdown for Safari compatibility
+		if (!cachedMarkdown && !isLoadingMarkdown) {
+			isLoadingMarkdown = true;
+			fetch(markdownHref, { cache: "no-store" })
+				.then((response) => {
+					if (response.ok) {
+						return response.text();
+					}
+					return null;
+				})
+				.then((text) => {
+					if (text) {
+						cachedMarkdown = text;
+					}
+				})
+				.catch(() => {
+					// Silently fail - will retry on copy click
+				})
+				.finally(() => {
+					isLoadingMarkdown = false;
+				});
+		}
 	};
 
 	const runCopyMarkdown = async (): Promise<void> => {
@@ -512,16 +515,26 @@ function mountPageAiMenu(markdownHref: string, llmsHref: string): () => void {
 		copyTrigger.classList.remove("is-success");
 
 		try {
-			const response = await fetch(markdownHref, { cache: "no-store" });
-			if (!response.ok) {
-				throw new Error("Could not load markdown");
+			let markdownText = cachedMarkdown;
+
+			// Fetch if not cached
+			if (!markdownText) {
+				const response = await fetch(markdownHref, { cache: "no-store" });
+				if (!response.ok) {
+					throw new Error("Could not load markdown");
+				}
+				markdownText = await response.text();
+				cachedMarkdown = markdownText;
 			}
 
-			const markdownText = await response.text();
-			const copied = await copyToClipboard(markdownText);
-			copyTrigger.textContent = copied ? "Copied" : "Copy failed";
-			copyTrigger.classList.toggle("is-success", copied);
-		} catch {
+			// Safari requires clipboard write to be direct result of user gesture
+			// Write synchronously without any await between click and clipboard.writeText
+			await navigator.clipboard.writeText(markdownText);
+
+			copyTrigger.textContent = "Copied";
+			copyTrigger.classList.add("is-success");
+		} catch (error) {
+			console.error("Copy failed:", error);
 			copyTrigger.textContent = "Copy failed";
 		}
 
