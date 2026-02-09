@@ -134,26 +134,8 @@ function highlightText(text: string, terms: string[]): string {
 }
 
 async function copyToClipboard(text: string): Promise<boolean> {
-	if (navigator.clipboard?.writeText) {
-		await navigator.clipboard.writeText(text);
-		return true;
-	}
-
-	const textArea = document.createElement("textarea");
-	textArea.value = text;
-	textArea.style.position = "fixed";
-	textArea.style.left = "-9999px";
-	document.body.append(textArea);
-	textArea.select();
-
-	let copied = false;
-	try {
-		copied = document.execCommand("copy");
-	} finally {
-		textArea.remove();
-	}
-
-	return copied;
+	await navigator.clipboard.writeText(text);
+	return true;
 }
 
 function addListener(
