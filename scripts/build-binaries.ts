@@ -41,7 +41,7 @@ async function buildBinaries() {
 		console.log(`Building ${targetName} -> ${outputName}`);
 
 		try {
-			await $`bun build --compile --target=${targetName} ./src/cli.ts --outfile ${outputPath}`;
+			await $`bun build --compile --minify --sourcemap --target=${targetName} ./src/cli.ts --outfile ${outputPath}`;
 			console.log(`  ✓ Built ${outputName}\n`);
 		} catch (error) {
 			console.error(`  ✗ Failed to build ${outputName}:`, error);
