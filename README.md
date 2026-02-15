@@ -15,17 +15,34 @@ Generate beautiful, fast, SEO-ready documentation sites from Markdown.
 ## Quick Start
 
 ```bash
+# Install docia (macOS/Linux)
+curl -fsSL https://docia.xyz/install.sh | sh
+
 # Create a new docs project
-bunx docia init my-docs
+docia init my-docs
 cd my-docs
 
 # Start development server
-bunx docia dev
+docia dev
 ```
 
 Your docs will be available at `http://localhost:3000`.
 
 ## Installation
+
+### Option 1: Standalone Executable (Recommended)
+
+No dependencies required. Works on macOS, Linux, and Windows.
+
+```bash
+# Install via install script (macOS/Linux)
+curl -fsSL https://docia.xyz/install.sh | sh
+
+# Windows users: download manually from GitHub Releases
+# https://github.com/docia/docia/releases/latest
+```
+
+### Option 2: npm (with Bun runtime)
 
 **Requirements:** Bun 1.3+
 

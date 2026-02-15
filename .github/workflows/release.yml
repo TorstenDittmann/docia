@@ -2,8 +2,9 @@ name: Publish Package
 on:
     release:
         types: [published]
+
 jobs:
-    build:
+    publish-npm:
         runs-on: ubuntu-latest
         environment: release
         permissions:
@@ -19,3 +20,50 @@ jobs:
             - run: bun publish --provenance --access public
               env:
                   NPM_CONFIG_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+
+    build-binaries:
+        needs: publish-npm
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@v5
+            - name: Setup Bun
+              uses: oven-sh/setup-bun@v1
+              with:
+                  bun-version: latest
+            - run: bun install --frozen-lockfile
+            - name: Get version
+              id: get_version
+              run: |
+                  VERSION=${GITHUB_REF#refs/tags/v}
+                  echo "version=$VERSION" >> $GITHUB_OUTPUT
+            - name: Build binaries
+              run: bun run scripts/build-binaries.ts
+            - name: Create archives
+              run: |
+                  cd dist
+
+                  # macOS x64
+                  tar -czf docia-v${{ steps.get_version.outputs.version }}-darwin-x64.tar.gz docia-v${{ steps.get_version.outputs.version }}-darwin-x64
+                  # macOS arm64
+                  tar -czf docia-v${{ steps.get_version.outputs.version }}-darwin-arm64.tar.gz docia-v${{ steps.get_version.outputs.version }}-darwin-arm64
+
+                  # Linux x64
+                  tar -czf docia-v${{ steps.get_version.outputs.version }}-linux-x64.tar.gz docia-v${{ steps.get_version.outputs.version }}-linux-x64
+                  # Linux arm64
+                  tar -czf docia-v${{ steps.get_version.outputs.version }}-linux-arm64.tar.gz docia-v${{ steps.get_version.outputs.version }}-linux-arm64
+
+                  # Windows x64
+                  zip docia-v${{ steps.get_version.outputs.version }}-windows-x64.zip docia-v${{ steps.get_version.outputs.version }}-windows-x64.exe
+            - name: Upload binaries to release
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: |
+                      dist/docia-v${{ steps.get_version.outputs.version }}-darwin-x64.tar.gz
+                      dist/docia-v${{ steps.get_version.outputs.version }}-darwin-arm64.tar.gz
+                      dist/docia-v${{ steps.get_version.outputs.version }}-linux-x64.tar.gz
+                      dist/docia-v${{ steps.get_version.outputs.version }}-linux-arm64.tar.gz
+                      dist/docia-v${{ steps.get_version.outputs.version }}-windows-x64.zip
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
