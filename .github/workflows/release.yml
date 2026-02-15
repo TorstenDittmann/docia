@@ -43,17 +43,17 @@ jobs:
             - name: Create archives
               run: |
                   cd dist
-                  
+
                   # macOS x64
                   tar -czf docia-v${{ steps.get_version.outputs.version }}-darwin-x64.tar.gz docia-v${{ steps.get_version.outputs.version }}-darwin-x64
                   # macOS arm64
                   tar -czf docia-v${{ steps.get_version.outputs.version }}-darwin-arm64.tar.gz docia-v${{ steps.get_version.outputs.version }}-darwin-arm64
-                  
+
                   # Linux x64
                   tar -czf docia-v${{ steps.get_version.outputs.version }}-linux-x64.tar.gz docia-v${{ steps.get_version.outputs.version }}-linux-x64
                   # Linux arm64
                   tar -czf docia-v${{ steps.get_version.outputs.version }}-linux-arm64.tar.gz docia-v${{ steps.get_version.outputs.version }}-linux-arm64
-                  
+
                   # Windows x64
                   zip docia-v${{ steps.get_version.outputs.version }}-windows-x64.zip docia-v${{ steps.get_version.outputs.version }}-windows-x64.exe
             - name: Upload binaries to release
