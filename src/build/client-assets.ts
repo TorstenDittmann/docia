@@ -64,17 +64,13 @@ export async function buildClientAssets(
 		outputFiles.push(artifact.path);
 
 		if (artifact.kind === "entry-point" && artifact.path.endsWith(".js")) {
-			const relativePath = artifact.path
-				.replace(config.outDirAbsolute, "")
-				.replace(/^\//, "");
-			scriptHref = toBasePathHref(config.basePath, `/${relativePath}`);
+			const relativePath = artifact.path.replace(config.outDirAbsolute, "");
+			scriptHref = toBasePathHref(config.basePath, relativePath);
 		}
 
 		if (artifact.path.endsWith(".css") && stylesheetHref === null) {
-			const relativePath = artifact.path
-				.replace(config.outDirAbsolute, "")
-				.replace(/^\//, "");
-			stylesheetHref = toBasePathHref(config.basePath, `/${relativePath}`);
+			const relativePath = artifact.path.replace(config.outDirAbsolute, "");
+			stylesheetHref = toBasePathHref(config.basePath, relativePath);
 		}
 	}
 
