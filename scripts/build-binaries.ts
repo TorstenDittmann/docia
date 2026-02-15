@@ -4,23 +4,13 @@ import { $ } from "bun";
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
-const targets = [
-	{ platform: "darwin", arch: "x64", ext: "" },
-	{ platform: "darwin", arch: "arm64", ext: "" },
-	{ platform: "linux", arch: "x64", ext: "" },
-	{ platform: "linux", arch: "arm64", ext: "" },
-	{ platform: "windows", arch: "x64", ext: ".exe" },
-];
-
 async function getVersion(): Promise<string> {
 	const packageJsonFile = Bun.file(new URL("../package.json", import.meta.url));
 	if (!(await packageJsonFile.exists())) {
 		return "0.0.0";
 	}
-
-	const packageJson: Record<string, unknown> = await packageJsonFile.json();
-
-	return typeof packageJson.version === "string" ? packageJson.version : "0.0.0";
+	const packageJson = (await packageJsonFile.json()) as { version?: string };
+	return packageJson.version ?? "0.0.0";
 }
 
 async function buildBinaries() {
@@ -33,6 +23,14 @@ async function buildBinaries() {
 
 	console.log(`Building binaries for version ${version}...\n`);
 
+	const targets = [
+		{ platform: "darwin", arch: "x64", ext: "" },
+		{ platform: "darwin", arch: "arm64", ext: "" },
+		{ platform: "linux", arch: "x64", ext: "" },
+		{ platform: "linux", arch: "arm64", ext: "" },
+		{ platform: "windows", arch: "x64", ext: ".exe" },
+	];
+
 	for (const target of targets) {
 		const targetName = `bun-${target.platform}-${target.arch}`;
 		const outputName = `docia-v${version}-${target.platform}-${target.arch}${target.ext}`;
@@ -41,7 +39,7 @@ async function buildBinaries() {
 		console.log(`Building ${targetName} -> ${outputName}`);
 
 		try {
-			await $`bun build --compile --target=${targetName} ./src/cli.ts --outfile ${outputPath}`;
+			await $`bun build --compile --minify --sourcemap --target=${targetName} ./src/cli.ts --outfile ${outputPath}`;
 			console.log(`  ✓ Built ${outputName}\n`);
 		} catch (error) {
 			console.error(`  ✗ Failed to build ${outputName}:`, error);

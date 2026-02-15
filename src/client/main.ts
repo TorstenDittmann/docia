@@ -1,8 +1,8 @@
 /// <reference lib="dom" />
 
 import "./styles.css";
-import { initSpaRouter } from "./router";
-import { initSearch } from "./search";
+import { initSpaRouter } from "./router.ts";
+import { initSearch } from "./search.ts";
 
 let cleanupSearch: (() => void) | null = null;
 
