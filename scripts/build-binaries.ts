@@ -5,10 +5,10 @@ import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
 const targets = [
-	{ platform: "darwin", arch: "x64" },
-	{ platform: "darwin", arch: "arm64" },
-	{ platform: "linux", arch: "x64" },
-	{ platform: "linux", arch: "arm64" },
+	{ platform: "darwin", arch: "x64", ext: "" },
+	{ platform: "darwin", arch: "arm64", ext: "" },
+	{ platform: "linux", arch: "x64", ext: "" },
+	{ platform: "linux", arch: "arm64", ext: "" },
 	{ platform: "windows", arch: "x64", ext: ".exe" },
 ];
 
@@ -35,7 +35,7 @@ async function buildBinaries() {
 
 	for (const target of targets) {
 		const targetName = `bun-${target.platform}-${target.arch}`;
-		const outputName = `docia-v${version}-${target.platform}-${target.arch}${target.ext ?? ""}`;
+		const outputName = `docia-v${version}-${target.platform}-${target.arch}${target.ext}`;
 		const outputPath = join(distDir, outputName);
 
 		console.log(`Building ${targetName} -> ${outputName}`);
