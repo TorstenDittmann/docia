@@ -21,11 +21,11 @@
 		}
 	},
 	"scripts": {
-		"docia": "bun run src/cli.ts",
-		"build": "bun run src/cli.ts build",
-		"dev": "bun run src/cli.ts dev",
-		"serve": "bun run src/cli.ts serve",
-		"check": "bun run src/cli.ts check",
+		"docia": "bun run src/cli.ts --config docs/docia.config.ts",
+		"build": "bun run src/cli.ts build --config docs/docia.config.ts",
+		"dev": "bun run src/cli.ts dev --config docs/docia.config.ts",
+		"serve": "bun run src/cli.ts serve --config docs/docia.config.ts",
+		"check": "bun run src/cli.ts check --config docs/docia.config.ts",
 		"test": "bun test",
 		"lint": "oxlint",
 		"lint:fix": "oxlint --fix",
