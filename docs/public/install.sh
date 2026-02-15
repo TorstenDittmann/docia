@@ -5,7 +5,7 @@
 
 set -e
 
-REPO="docia/docia"
+REPO="torstendittmann/docia"
 BIN_NAME="docia"
 
 # Detect OS (Windows not supported via install script)
