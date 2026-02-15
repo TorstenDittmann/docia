@@ -1,8 +1,37 @@
-import { relative, sep } from "node:path";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ResolvedConfig } from "../config/types";
 import { CliError } from "../errors";
 import { toBasePathHref } from "../utils/html";
+
+// Client files that need to be bundled
+const CLIENT_FILES = ["main.ts", "router.ts", "search.ts", "styles.css"] as const;
+
+let tempClientDir: string | null = null;
+
+async function extractClientFilesToTemp(): Promise<string> {
+	if (tempClientDir !== null) {
+		return tempClientDir;
+	}
+
+	tempClientDir = join(process.cwd(), ".docia-client-cache");
+
+	for (const filename of CLIENT_FILES) {
+		const sourceUrl = new URL(`../client/${filename}`, import.meta.url);
+		const sourceContent = await Bun.file(sourceUrl).text();
+		const targetPath = join(tempClientDir, filename);
+
+		await mkdir(dirname(targetPath), { recursive: true });
+		await writeFile(targetPath, sourceContent);
+	}
+
+	return tempClientDir;
+}
+
+function isCompiledBinary(): boolean {
+	return import.meta.url.includes("/$bunfs/");
+}
 
 export interface ClientAssetManifest {
 	scriptHref: string | null;
@@ -55,7 +84,14 @@ export async function buildClientAssets(
 	config: ResolvedConfig,
 	options: BuildClientAssetsOptions = {},
 ): Promise<ClientAssetManifest> {
-	const entrypointPath = fileURLToPath(new URL("../client/main.ts", import.meta.url));
+	let entrypointPath: string;
+
+	if (isCompiledBinary()) {
+		const clientDir = await extractClientFilesToTemp();
+		entrypointPath = join(clientDir, "main.ts");
+	} else {
+		entrypointPath = fileURLToPath(new URL("../client/main.ts", import.meta.url));
+	}
 
 	const result = await Bun.build({
 		entrypoints: [entrypointPath],
