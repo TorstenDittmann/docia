@@ -1,6 +1,6 @@
 {
 	"name": "docia",
-	"version": "0.0.12",
+	"version": "0.0.13",
 	"bin": {
 		"docia": "./src/cli.ts"
 	},
