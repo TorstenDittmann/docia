@@ -1,37 +1,19 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, join, relative, sep } from "node:path";
-import { fileURLToPath } from "node:url";
 import type { ResolvedConfig } from "../config/types";
 import { CliError } from "../errors";
 import { toBasePathHref } from "../utils/html";
 
-// Client files that need to be bundled
-const CLIENT_FILES = ["main.ts", "router.ts", "search.ts", "styles.css"] as const;
+// Import client source files as raw strings
+import mainTs from "../client/main.ts" with { type: "text" };
+import routerTs from "../client/router.ts" with { type: "text" };
+import searchTs from "../client/search.ts" with { type: "text" };
+import stylesCss from "../client/styles.css" with { type: "text" };
 
-let tempClientDir: string | null = null;
-
-async function extractClientFilesToTemp(): Promise<string> {
-	if (tempClientDir !== null) {
-		return tempClientDir;
-	}
-
-	tempClientDir = join(process.cwd(), ".docia-client-cache");
-
-	for (const filename of CLIENT_FILES) {
-		const sourceUrl = new URL(`../client/${filename}`, import.meta.url);
-		const sourceContent = await Bun.file(sourceUrl).text();
-		const targetPath = join(tempClientDir, filename);
-
-		await mkdir(dirname(targetPath), { recursive: true });
-		await writeFile(targetPath, sourceContent);
-	}
-
-	return tempClientDir;
-}
-
-function isCompiledBinary(): boolean {
-	return import.meta.url.includes("/$bunfs/");
-}
+const CLIENT_FILES: Record<string, string> = {
+	"main.ts": mainTs,
+	"router.ts": routerTs,
+	"search.ts": searchTs,
+	"styles.css": stylesCss,
+};
 
 export interface ClientAssetManifest {
 	scriptHref: string | null;
@@ -44,57 +26,12 @@ export interface BuildClientAssetsOptions {
 	sourcemap?: Bun.BuildConfig["sourcemap"];
 }
 
-function toWebPath(pathValue: string): string {
-	return pathValue.split(sep).join("/");
-}
-
-function toHref(config: ResolvedConfig, absolutePath: string): string {
-	const relativePath = toWebPath(relative(config.outDirAbsolute, absolutePath));
-	return toBasePathHref(config.basePath, `/${relativePath}`);
-}
-
-interface BuildLogLike {
-	message: string;
-	position?: {
-		file?: string;
-		line?: number;
-		column?: number;
-	} | null;
-}
-
-function formatBuildLogs(logs: BuildLogLike[]): string {
-	if (logs.length === 0) {
-		return "unknown build error";
-	}
-
-	return logs
-		.map((log) => {
-			if (log.position?.file) {
-				const line = log.position.line ?? 0;
-				const column = log.position.column ?? 0;
-				return `${log.position.file}:${line}:${column} ${log.message}`;
-			}
-
-			return log.message;
-		})
-		.join("\n");
-}
-
 export async function buildClientAssets(
 	config: ResolvedConfig,
 	options: BuildClientAssetsOptions = {},
 ): Promise<ClientAssetManifest> {
-	let entrypointPath: string;
-
-	if (isCompiledBinary()) {
-		const clientDir = await extractClientFilesToTemp();
-		entrypointPath = join(clientDir, "main.ts");
-	} else {
-		entrypointPath = fileURLToPath(new URL("../client/main.ts", import.meta.url));
-	}
-
 	const result = await Bun.build({
-		entrypoints: [entrypointPath],
+		entrypoints: ["virtual:main.ts"],
 		outdir: config.outDirAbsolute,
 		target: "browser",
 		format: "esm",
@@ -102,17 +39,56 @@ export async function buildClientAssets(
 		minify: options.minify ?? true,
 		sourcemap: options.sourcemap ?? "none",
 		naming: {
-			entry: "assets/[name]-[hash].[ext]",
-			chunk: "assets/[name]-[hash].[ext]",
-			asset: "assets/[name]-[hash].[ext]",
+			entry: "[name]-[hash].[ext]",
+			chunk: "[name]-[hash].[ext]",
+			asset: "[name]-[hash].[ext]",
 		},
 		loader: {
 			".css": "css",
 		},
+		plugins: [
+			{
+				name: "virtual-files",
+				setup(build) {
+					build.onResolve({ filter: /^virtual:/ }, (args) => ({
+						path: args.path,
+						namespace: "virtual",
+					}));
+					build.onLoad({ filter: /^virtual:main\.ts$/, namespace: "virtual" }, () => ({
+						contents: CLIENT_FILES["main.ts"],
+						loader: "ts",
+					}));
+					build.onResolve({ filter: /^\.\/router$/ }, () => ({
+						path: "virtual:router.ts",
+						namespace: "virtual",
+					}));
+					build.onLoad({ filter: /^virtual:router\.ts$/, namespace: "virtual" }, () => ({
+						contents: CLIENT_FILES["router.ts"],
+						loader: "ts",
+					}));
+					build.onResolve({ filter: /^\.\/search$/ }, () => ({
+						path: "virtual:search.ts",
+						namespace: "virtual",
+					}));
+					build.onLoad({ filter: /^virtual:search\.ts$/, namespace: "virtual" }, () => ({
+						contents: CLIENT_FILES["search.ts"],
+						loader: "ts",
+					}));
+					build.onResolve({ filter: /^\.\/styles\.css$/ }, () => ({
+						path: "virtual:styles.css",
+						namespace: "virtual",
+					}));
+					build.onLoad({ filter: /^virtual:styles\.css$/, namespace: "virtual" }, () => ({
+						contents: CLIENT_FILES["styles.css"],
+						loader: "css",
+					}));
+				},
+			},
+		],
 	});
 
 	if (!result.success) {
-		throw new CliError(`Failed to bundle client assets:\n${formatBuildLogs(result.logs)}`);
+		throw new CliError("Failed to bundle client assets");
 	}
 
 	let scriptHref: string | null = null;
@@ -123,11 +99,17 @@ export async function buildClientAssets(
 		outputFiles.push(artifact.path);
 
 		if (artifact.kind === "entry-point" && artifact.path.endsWith(".js")) {
-			scriptHref = toHref(config, artifact.path);
+			const relativePath = artifact.path
+				.replace(config.outDirAbsolute, "")
+				.replace(/^\//, "");
+			scriptHref = toBasePathHref(config.basePath, `/${relativePath}`);
 		}
 
 		if (artifact.path.endsWith(".css") && stylesheetHref === null) {
-			stylesheetHref = toHref(config, artifact.path);
+			const relativePath = artifact.path
+				.replace(config.outDirAbsolute, "")
+				.replace(/^\//, "");
+			stylesheetHref = toBasePathHref(config.basePath, `/${relativePath}`);
 		}
 	}
 
