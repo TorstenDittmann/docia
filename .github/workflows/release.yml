@@ -36,7 +36,7 @@ jobs:
             - name: Get version
               id: get_version
               run: |
-                  VERSION=${GITHUB_REF#refs/tags/v}
+                  VERSION=$(echo "$GITHUB_REF" | sed 's/refs\/tags\/v\?//')
                   echo "version=$VERSION" >> $GITHUB_OUTPUT
             - name: Build binaries
               run: bun run scripts/build-binaries.ts
