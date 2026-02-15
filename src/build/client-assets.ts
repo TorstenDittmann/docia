@@ -6,7 +6,7 @@ import { toBasePathHref } from "../utils/html";
 import mainTs from "../client/main.ts" with { type: "text" };
 // @ts-expect-error Bun's text import attribute
 import routerTs from "../client/router.ts" with { type: "text" };
-// @ts-expect-error Bun's text import attribute  
+// @ts-expect-error Bun's text import attribute
 import searchTs from "../client/search.ts" with { type: "text" };
 // @ts-expect-error Bun's text import attribute
 import stylesCss from "../client/styles.css" with { type: "text" };
