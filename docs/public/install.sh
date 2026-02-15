@@ -32,7 +32,7 @@ if [ -z "$VERSION" ]; then
     exit 1
 fi
 
-ASSET_NAME="docia-${VERSION}-${PLATFORM}-${ARCH}.${EXT}"
+ASSET_NAME="docia-v${VERSION}-${PLATFORM}-${ARCH}.${EXT}"
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/${ASSET_NAME}"
 
 echo "Installing Docia ${VERSION} for ${PLATFORM}-${ARCH}..."
@@ -57,7 +57,7 @@ else
 fi
 
 # Find the binary
-EXTRACTED_BIN="docia-${VERSION}-${PLATFORM}-${ARCH}"
+EXTRACTED_BIN="docia-v${VERSION}-${PLATFORM}-${ARCH}"
 if [ "$PLATFORM" = "windows" ]; then
     EXTRACTED_BIN="${EXTRACTED_BIN}.exe"
 fi
