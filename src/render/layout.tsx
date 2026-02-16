@@ -293,9 +293,21 @@ function SidebarEntry(props: {
 	);
 }
 
+function extractXUsername(url: string): string {
+	try {
+		const parsed = new URL(url);
+		const segments = parsed.pathname.split("/").filter((segment) => segment.length > 0);
+		const username = segments[0];
+		return username || "X";
+	} catch {
+		return "X";
+	}
+}
+
 function renderSidebarFooter(config: ResolvedConfig): JSX.Element {
 	const githubHref = normalizeExternalUrl(config.site.socials.github);
 	const xHref = normalizeExternalUrl(config.site.socials.x);
+	const xUsername = xHref ? extractXUsername(xHref) : null;
 
 	return (
 		<div className="sidebar-footer">
@@ -319,7 +331,7 @@ function renderSidebarFooter(config: ResolvedConfig): JSX.Element {
 							target="_blank"
 							rel="noopener noreferrer"
 						>
-							<IconX />X
+							<IconX />{xUsername}
 						</a>
 					) : null}
 				</div>
