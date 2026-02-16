@@ -8,7 +8,7 @@
 - Configuration
     - [Configuration](configuration.md)
     - [CLI Reference](cli-reference.md)
-    - [Summary Syntax](summary-syntax.md)
+    - [Navigation](summary-syntax.md)
 - Advanced
     - [LLM Features](llm-features.md)
     - [Deployment](deployment.md)
