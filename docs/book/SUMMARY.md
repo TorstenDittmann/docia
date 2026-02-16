@@ -1,10 +1,14 @@
 # Summary
 
 - [Introduction](README.md)
-- [Installation](installation.md)
-- [Quick Start](quick-start.md)
-- [Project Structure](project-structure.md)
-- [Configuration](configuration.md)
-- [CLI Reference](cli-reference.md)
-- [LLM Features](llm-features.md)
-- [Deployment](deployment.md)
+- Getting Started
+    - [Installation](installation.md)
+    - [Quick Start](quick-start.md)
+    - [Project Structure](project-structure.md)
+- Configuration
+    - [Configuration](configuration.md)
+    - [CLI Reference](cli-reference.md)
+    - [Navigation](summary-syntax.md)
+- Advanced
+    - [LLM Features](llm-features.md)
+    - [Deployment](deployment.md)
