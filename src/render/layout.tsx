@@ -331,7 +331,8 @@ function renderSidebarFooter(config: ResolvedConfig): JSX.Element {
 							target="_blank"
 							rel="noopener noreferrer"
 						>
-							<IconX />{xUsername}
+							<IconX />
+							{xUsername}
 						</a>
 					) : null}
 				</div>
