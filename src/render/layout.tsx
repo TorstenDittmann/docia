@@ -724,12 +724,39 @@ export function prerenderSidebarHtml(config: ResolvedConfig, graph: SummaryGraph
 	);
 }
 
+function escapeRegExp(input: string): string {
+	return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /**
  * Stamps the `is-active` class onto the sidebar item matching the given chapter ID.
  * Matches by `data-sidebar-id` to avoid HTML-escaping and duplicate-href issues.
  */
 export function activateSidebarHtml(sidebarHtml: string, chapter: SummaryChapterEntry): string {
-	const needle = `class="summary-item" data-sidebar-id="${chapter.id}"`;
-	const replacement = `class="summary-item is-active" data-sidebar-id="${chapter.id}"`;
-	return sidebarHtml.replace(needle, replacement);
+	const escapedId = escapeRegExp(chapter.id);
+	const listItemPattern = new RegExp(
+		`<li\\b[^>]*\\bdata-sidebar-id=["']${escapedId}["'][^>]*>`,
+		"i",
+	);
+
+	const classPattern = /\bclass=(["'])([^"']*)\1/i;
+
+	return sidebarHtml.replace(listItemPattern, (listItemTag) => {
+		const classMatch = classPattern.exec(listItemTag);
+		if (!classMatch) {
+			return listItemTag;
+		}
+
+		const quote = classMatch[1] ?? '"';
+		const classes = String(classMatch[2] ?? "")
+			.split(/\s+/)
+			.filter(Boolean);
+
+		if (!classes.includes("is-active")) {
+			classes.push("is-active");
+		}
+
+		const replacement = `class=${quote}${classes.join(" ")}${quote}`;
+		return listItemTag.replace(classPattern, replacement);
+	});
 }
