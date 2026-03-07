@@ -131,7 +131,7 @@ function extractLanguageFromAttributes(attributes: string): string | null {
 	return null;
 }
 
-function normalizeLanguageName(language: string | null, highlighter: Highlighter): string {
+function normalizeLanguageName(language: string | null, loadedLanguages: Set<string>): string {
 	if (language === null) {
 		return "text";
 	}
@@ -146,11 +146,14 @@ function normalizeLanguageName(language: string | null, highlighter: Highlighter
 		return mapped;
 	}
 
-	const loadedLanguages = new Set(highlighter.getLoadedLanguages().map(String));
 	return loadedLanguages.has(mapped) ? mapped : "text";
 }
 
-function highlightCodeBlocks(html: string, highlighter: Highlighter): string {
+function highlightCodeBlocks(
+	html: string,
+	highlighter: Highlighter,
+	loadedLanguages: Set<string>,
+): string {
 	return html.replace(CODE_BLOCK_PATTERN, (fullMatch, attributes, encodedCode) => {
 		const codeBody = String(encodedCode ?? "");
 
@@ -159,7 +162,7 @@ function highlightCodeBlocks(html: string, highlighter: Highlighter): string {
 		}
 
 		const rawLanguage = extractLanguageFromAttributes(String(attributes ?? ""));
-		const language = normalizeLanguageName(rawLanguage, highlighter);
+		const language = normalizeLanguageName(rawLanguage, loadedLanguages);
 		const code = decodeHtmlEntities(codeBody);
 
 		try {
@@ -179,6 +182,7 @@ export async function createMarkdownEngine(config: ResolvedConfig): Promise<Mark
 	};
 
 	const highlighter = await getHighlighter();
+	const loadedLanguages = new Set(highlighter.getLoadedLanguages().map(String));
 
 	const renderHtml = (markdown: string): string => {
 		const markdownElement = Bun.markdown.react(markdown, undefined, {
@@ -187,7 +191,7 @@ export async function createMarkdownEngine(config: ResolvedConfig): Promise<Mark
 		});
 
 		const rawHtml = renderToStaticMarkup(markdownElement);
-		return highlightCodeBlocks(rawHtml, highlighter);
+		return highlightCodeBlocks(rawHtml, highlighter, loadedLanguages);
 	};
 
 	const toPlainText = (markdown: string): string => {
