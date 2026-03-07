@@ -1,5 +1,4 @@
 import { createHighlighter, type Highlighter } from "shiki";
-import { renderToStaticMarkup } from "react-dom/server";
 import type { ResolvedConfig } from "../config/types";
 import { stripHtml } from "../utils/html";
 
@@ -7,6 +6,7 @@ type ParserOptions = NonNullable<Parameters<typeof Bun.markdown.html>[1]>;
 
 const HEADING_PATTERN = /<h([1-6])([^>]*)>([\s\S]*?)<\/h\1>/gi;
 const CODE_BLOCK_PATTERN = /<pre([^>]*)>([\s\S]*?)<\/pre>/gi;
+const WRAPPED_CODE_BLOCK_PATTERN = /^\s*<code([^>]*)>([\s\S]*?)<\/code>\s*$/i;
 
 const SHIKI_THEMES = {
 	light: "github-light",
@@ -131,7 +131,7 @@ function extractLanguageFromAttributes(attributes: string): string | null {
 	return null;
 }
 
-function normalizeLanguageName(language: string | null, highlighter: Highlighter): string {
+function normalizeLanguageName(language: string | null, loadedLanguages: Set<string>): string {
 	if (language === null) {
 		return "text";
 	}
@@ -146,20 +146,38 @@ function normalizeLanguageName(language: string | null, highlighter: Highlighter
 		return mapped;
 	}
 
-	const loadedLanguages = new Set(highlighter.getLoadedLanguages().map(String));
 	return loadedLanguages.has(mapped) ? mapped : "text";
 }
 
-function highlightCodeBlocks(html: string, highlighter: Highlighter): string {
+function unwrapCodeFromPreBlock(attributes: string, codeBody: string): [string, string] {
+	// Bun.markdown.html emits fenced blocks
+	// as <pre><code class="language-...">...</code></pre>.
+	const wrappedCodeMatch = WRAPPED_CODE_BLOCK_PATTERN.exec(codeBody);
+	if (!wrappedCodeMatch) {
+		return [attributes, codeBody];
+	}
+
+	const mergedAttributes = `${attributes} ${String(wrappedCodeMatch[1] ?? "")}`.trim();
+	return [mergedAttributes, String(wrappedCodeMatch[2] ?? "")];
+}
+
+function highlightCodeBlocks(
+	html: string,
+	highlighter: Highlighter,
+	loadedLanguages: Set<string>,
+): string {
 	return html.replace(CODE_BLOCK_PATTERN, (fullMatch, attributes, encodedCode) => {
-		const codeBody = String(encodedCode ?? "");
+		const [attributeText, codeBody] = unwrapCodeFromPreBlock(
+			String(attributes ?? ""),
+			String(encodedCode ?? ""),
+		);
 
 		if (/<\/?[a-z][^>]*>/i.test(codeBody)) {
 			return fullMatch;
 		}
 
-		const rawLanguage = extractLanguageFromAttributes(String(attributes ?? ""));
-		const language = normalizeLanguageName(rawLanguage, highlighter);
+		const rawLanguage = extractLanguageFromAttributes(attributeText);
+		const language = normalizeLanguageName(rawLanguage, loadedLanguages);
 		const code = decodeHtmlEntities(codeBody);
 
 		try {
@@ -179,15 +197,11 @@ export async function createMarkdownEngine(config: ResolvedConfig): Promise<Mark
 	};
 
 	const highlighter = await getHighlighter();
+	const loadedLanguages = new Set(highlighter.getLoadedLanguages().map(String));
 
 	const renderHtml = (markdown: string): string => {
-		const markdownElement = Bun.markdown.react(markdown, undefined, {
-			...parserOptions,
-			reactVersion: 19,
-		});
-
-		const rawHtml = renderToStaticMarkup(markdownElement);
-		return highlightCodeBlocks(rawHtml, highlighter);
+		const rawHtml = Bun.markdown.html(markdown, parserOptions);
+		return highlightCodeBlocks(rawHtml, highlighter, loadedLanguages);
 	};
 
 	const toPlainText = (markdown: string): string => {

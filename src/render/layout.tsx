@@ -18,6 +18,7 @@ export interface RenderPageLayoutInput {
 	headings: MarkdownHeading[];
 	pageDescription: string;
 	assets: RenderAssetManifest;
+	sidebarHtml?: string;
 }
 
 const DOCIA_GITHUB_URL = "https://github.com/torstendittmann/docia";
@@ -259,7 +260,7 @@ function SidebarEntry(props: {
 			: toBasePathHref(config.basePath, linkEntry.href);
 
 		return (
-			<li className={`summary-item${activeClass}`}>
+			<li className={`summary-item${activeClass}`} data-sidebar-id={linkEntry.id}>
 				<a
 					href={href}
 					target={linkEntry.external ? "_blank" : undefined}
@@ -275,7 +276,7 @@ function SidebarEntry(props: {
 	const href = toBasePathHref(config.basePath, entry.routePath);
 
 	return (
-		<li className={`summary-item${activeClass}`}>
+		<li className={`summary-item${activeClass}`} data-sidebar-id={entry.id}>
 			<a href={href}>{entry.title}</a>
 			{entry.children.length > 0 ? (
 				<ul className="summary-list">
@@ -585,18 +586,25 @@ function PageDocument(props: RenderPageLayoutInput): JSX.Element {
 								</span>
 								<span className="command-trigger-label">Search docs</span>
 							</button>
-							<nav aria-label="Chapters">
-								<ul className="summary-list">
-									{graph.entries.map((entry) => (
-										<SidebarEntry
-											key={entry.id}
-											entry={entry}
-											config={config}
-											activeChapterId={chapter.id}
-										/>
-									))}
-								</ul>
-							</nav>
+							{props.sidebarHtml ? (
+								<nav
+									aria-label="Chapters"
+									dangerouslySetInnerHTML={{ __html: props.sidebarHtml }}
+								/>
+							) : (
+								<nav aria-label="Chapters">
+									<ul className="summary-list">
+										{graph.entries.map((entry) => (
+											<SidebarEntry
+												key={entry.id}
+												entry={entry}
+												config={config}
+												activeChapterId={chapter.id}
+											/>
+										))}
+									</ul>
+								</nav>
+							)}
 							{renderSidebarFooter(config)}
 						</div>
 					</aside>
@@ -700,4 +708,55 @@ function PageDocument(props: RenderPageLayoutInput): JSX.Element {
 
 export function renderPageLayout(input: RenderPageLayoutInput): string {
 	return `<!doctype html>${renderToStaticMarkup(<PageDocument {...input} />)}`;
+}
+
+/**
+ * Pre-renders the sidebar navigation HTML once (without any active state).
+ * Use `activateSidebarHtml` to stamp `is-active` for a specific chapter.
+ */
+export function prerenderSidebarHtml(config: ResolvedConfig, graph: SummaryGraph): string {
+	return renderToStaticMarkup(
+		<ul className="summary-list">
+			{graph.entries.map((entry) => (
+				<SidebarEntry key={entry.id} entry={entry} config={config} activeChapterId="" />
+			))}
+		</ul>,
+	);
+}
+
+function escapeRegExp(input: string): string {
+	return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Stamps the `is-active` class onto the sidebar item matching the given chapter ID.
+ * Matches by `data-sidebar-id` to avoid HTML-escaping and duplicate-href issues.
+ */
+export function activateSidebarHtml(sidebarHtml: string, chapter: SummaryChapterEntry): string {
+	const escapedId = escapeRegExp(chapter.id);
+	const listItemPattern = new RegExp(
+		`<li\\b[^>]*\\bdata-sidebar-id=["']${escapedId}["'][^>]*>`,
+		"i",
+	);
+
+	const classPattern = /\bclass=(["'])([^"']*)\1/i;
+
+	return sidebarHtml.replace(listItemPattern, (listItemTag) => {
+		const classMatch = classPattern.exec(listItemTag);
+		if (!classMatch) {
+			return listItemTag;
+		}
+
+		const quote = classMatch[1] ?? '"';
+		const classes = String(classMatch[2] ?? "")
+			.split(/\s+/)
+			.filter(Boolean);
+
+		if (!classes.includes("is-active")) {
+			classes.push("is-active");
+		}
+
+		const replacement = `class=${quote}${classes.join(" ")}${quote}`;
+		return listItemTag.replace(classPattern, replacement);
+	});
 }

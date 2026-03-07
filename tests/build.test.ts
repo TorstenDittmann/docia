@@ -123,4 +123,65 @@ Link back to [Intro](README.md).
 		expect(searchPayload.pages.map((page) => page.routePath)).toContain("/");
 		expect(searchPayload.pages.map((page) => page.routePath)).toContain("/guide/");
 	});
+
+	test("activates only the matching chapter sidebar item and highlights wrapped code fences", async () => {
+		const fixture = await createTestProjectFixture();
+		cleanupTasks.push(fixture.cleanup);
+
+		await fixture.write(
+			"book/SUMMARY.md",
+			`# Summary
+
+- [Home](README.md)
+- [Alias](/a&b/)
+- [A&B Chapter](a&b.md)
+`,
+		);
+		await fixture.write(
+			"book/README.md",
+			`# Home
+
+Welcome.
+`,
+		);
+		await fixture.write(
+			"book/a&b.md",
+			[
+				"# A&B Chapter",
+				"",
+				"```ts",
+				"const value: number = 42;",
+				"console.log(value);",
+				"```",
+				"",
+				"Back to [Home](README.md).",
+			].join("\n"),
+		);
+
+		const loaded = await loadConfig({ cwd: fixture.rootDir });
+		await buildSite(loaded.config);
+
+		const chapterPath = resolve(fixture.rootDir, "dist/a&b/index.html");
+		expect(await Bun.file(chapterPath).exists()).toBe(true);
+
+		const chapterHtml = await Bun.file(chapterPath).text();
+		const aliasLiMatch = /<li\b([^>]*)>\s*<a href="\/a&amp;b\/">Alias<\/a>\s*<\/li>/.exec(
+			chapterHtml,
+		);
+		expect(aliasLiMatch).not.toBeNull();
+		expect(aliasLiMatch?.[1]).toContain('class="summary-item');
+		expect(aliasLiMatch?.[1]).not.toContain("is-active");
+
+		const chapterLiMatch = /<li\b([^>]*)>\s*<a href="\/a&amp;b\/">A&amp;B Chapter<\/a>/.exec(
+			chapterHtml,
+		);
+		expect(chapterLiMatch).not.toBeNull();
+		expect(chapterLiMatch?.[1]).toContain("is-active");
+
+		const activeClassMatches = chapterHtml.match(/class="[^"]*\bis-active\b[^"]*"/g) ?? [];
+		expect(activeClassMatches.length).toBe(1);
+
+		expect(chapterHtml).toContain('class="shiki');
+		expect(chapterHtml).not.toContain('<pre><code class="language-ts">');
+	});
 });

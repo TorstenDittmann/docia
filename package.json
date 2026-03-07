@@ -31,6 +31,7 @@
 		"lint:fix": "oxlint --fix",
 		"fmt": "oxfmt",
 		"fmt:check": "oxfmt --check",
+		"bench": "bun run src/cli.ts build --config examples/benchmark-1000/docia.config.ts",
 		"build:binary": "bun build --compile ./src/cli.ts --outfile docia",
 		"build:binaries": "bun run scripts/build-binaries.ts"
 	},
