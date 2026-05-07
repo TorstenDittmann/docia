@@ -159,6 +159,22 @@ function dispatchNavigate(href: string): void {
 	);
 }
 
+function isTypingElement(target: EventTarget | null): boolean {
+	if (!(target instanceof HTMLElement)) {
+		return false;
+	}
+
+	if (
+		target instanceof HTMLInputElement ||
+		target instanceof HTMLTextAreaElement ||
+		target instanceof HTMLSelectElement
+	) {
+		return true;
+	}
+
+	return target.isContentEditable;
+}
+
 function createMiniSearch(): MiniSearch<SearchIndexPage> {
 	return new MiniSearch({
 		fields: ["title", "text"],
@@ -396,6 +412,24 @@ function mountCommandMenu(basePath: string, searchIndexHref: string): () => void
 		}
 
 		if (overlay.hidden) {
+			if (
+				!keyboardEvent.metaKey &&
+				!keyboardEvent.ctrlKey &&
+				!keyboardEvent.altKey &&
+				!keyboardEvent.shiftKey &&
+				!isTypingElement(keyboardEvent.target) &&
+				(keyboardEvent.key === "ArrowLeft" || keyboardEvent.key === "ArrowRight")
+			) {
+				const direction = keyboardEvent.key === "ArrowLeft" ? "previous" : "next";
+				const pagerLink = document.querySelector<HTMLAnchorElement>(
+					`.pager-link[data-pager-direction="${direction}"]`,
+				);
+				if (pagerLink) {
+					keyboardEvent.preventDefault();
+					dispatchNavigate(pagerLink.href);
+				}
+			}
+
 			return;
 		}
 
