@@ -394,6 +394,7 @@ function Pagination(props: {
 			{previousChapter ? (
 				<a
 					className="pager-link"
+					data-pager-direction="previous"
 					href={toBasePathHref(props.config.basePath, previousChapter.routePath)}
 				>
 					<span>Previous</span>
@@ -405,6 +406,7 @@ function Pagination(props: {
 			{nextChapter ? (
 				<a
 					className="pager-link"
+					data-pager-direction="next"
 					href={toBasePathHref(props.config.basePath, nextChapter.routePath)}
 				>
 					<span>Next</span>
