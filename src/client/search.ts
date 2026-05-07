@@ -422,7 +422,7 @@ function mountCommandMenu(basePath: string, searchIndexHref: string): () => void
 			) {
 				const direction = keyboardEvent.key === "ArrowLeft" ? "previous" : "next";
 				const pagerLink = document.querySelector<HTMLAnchorElement>(
-					`.pager-link[data-pager-direction="${direction}"]`,
+					`[data-pager-direction="${direction}"]`,
 				);
 				if (pagerLink) {
 					keyboardEvent.preventDefault();
