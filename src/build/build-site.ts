@@ -5,7 +5,7 @@ import type { SummaryGraph } from "../book";
 import type { ResolvedConfig } from "../config/types";
 import { CliError } from "../errors";
 import { createMarkdownEngine } from "../markdown";
-import { renderPageLayout } from "../render";
+import { activateSidebarHtml, prerenderSidebarHtml, renderPageLayout } from "../render";
 import { createSearchEntry, emitSearchIndex } from "../search";
 import { toBasePathHref } from "../utils/html";
 import { buildClientAssets } from "./client-assets";
@@ -178,61 +178,90 @@ export async function buildSite(
 	emitProgress({ phase: "assets", status: "end" });
 	const assetsMs = Date.now() - assetsStartedAt;
 
+	const baseSidebarHtml = prerenderSidebarHtml(config, graph);
+
 	const totalPages = graph.chapters.length;
 	const pagesStartedAt = Date.now();
 	emitProgress({ phase: "pages", status: "start", total: totalPages });
-	for (const [chapterIndex, chapter] of graph.chapters.entries()) {
-		const chapterFile = Bun.file(chapter.sourceAbsolutePath);
-		if (!(await chapterFile.exists())) {
-			throw new CliError(
-				`Chapter file does not exist for SUMMARY entry: ${chapter.sourcePath}`,
-			);
-		}
 
-		const markdownSource = await chapterFile.text();
-		const rendered = markdownEngine.renderPage(markdownSource);
-		const contentHtml = rewriteChapterLinks(
-			rendered.html,
-			chapter.sourcePath,
-			graph,
-			config.basePath,
-		);
+	// pre-create dirs in parallel
+	const outputDirs = new Set<string>();
+	for (const chapter of graph.chapters) {
+		outputDirs.add(dirname(resolve(config.outDirAbsolute, chapter.outputPath)));
+		outputDirs.add(dirname(resolve(config.outDirAbsolute, `${chapter.outputPath}.md`)));
+	}
+	await Promise.all([...outputDirs].map((dir) => mkdir(dir, { recursive: true })));
 
-		searchEntries.push(
-			createSearchEntry({
-				id: chapter.id,
-				title: chapter.title,
-				routePath: chapter.routePath,
-				sourcePath: chapter.sourcePath,
-				text: rendered.searchText,
+	const BATCH_SIZE = 32;
+	let completedPages = 0;
+	for (let batchStart = 0; batchStart < totalPages; batchStart += BATCH_SIZE) {
+		const batch = graph.chapters.slice(batchStart, batchStart + BATCH_SIZE);
+
+		const batchResults = await Promise.all(
+			batch.map(async (chapter) => {
+				const chapterFile = Bun.file(chapter.sourceAbsolutePath);
+				if (!(await chapterFile.exists())) {
+					throw new CliError(
+						`Chapter file does not exist for SUMMARY entry: ${chapter.sourcePath}`,
+					);
+				}
+
+				const markdownSource = await chapterFile.text();
+				const rendered = markdownEngine.renderPage(markdownSource);
+				const contentHtml = rewriteChapterLinks(
+					rendered.html,
+					chapter.sourcePath,
+					graph,
+					config.basePath,
+				);
+
+				const searchEntry = createSearchEntry({
+					id: chapter.id,
+					title: chapter.title,
+					routePath: chapter.routePath,
+					sourcePath: chapter.sourcePath,
+					text: rendered.searchText,
+				});
+
+				const sidebarHtml = activateSidebarHtml(baseSidebarHtml, chapter);
+				const html = renderPageLayout({
+					config,
+					graph,
+					chapter,
+					contentHtml,
+					headings: rendered.headings,
+					pageDescription: buildPageDescription(rendered.plainText),
+					assets,
+					sidebarHtml,
+				});
+
+				const outputPath = resolve(config.outDirAbsolute, chapter.outputPath);
+				const markdownOutputPath = resolve(
+					config.outDirAbsolute,
+					`${chapter.outputPath}.md`,
+				);
+
+				await Promise.all([
+					Bun.write(outputPath, html),
+					Bun.write(markdownOutputPath, markdownSource),
+				]);
+
+				return { chapter, searchEntry };
 			}),
 		);
 
-		const html = renderPageLayout({
-			config,
-			graph,
-			chapter,
-			contentHtml,
-			headings: rendered.headings,
-			pageDescription: buildPageDescription(rendered.plainText),
-			assets,
-		});
+		for (const { chapter, searchEntry } of batchResults) {
+			searchEntries.push(searchEntry);
+			outputFiles.push(chapter.outputPath);
+			outputFiles.push(`${chapter.outputPath}.md`);
+			markdownMirrorCount += 1;
+		}
 
-		const outputPath = resolve(config.outDirAbsolute, chapter.outputPath);
-		await mkdir(dirname(outputPath), { recursive: true });
-		await Bun.write(outputPath, html);
-		outputFiles.push(chapter.outputPath);
-
-		const markdownOutputPath = resolve(config.outDirAbsolute, `${chapter.outputPath}.md`);
-		await mkdir(dirname(markdownOutputPath), { recursive: true });
-		await Bun.write(markdownOutputPath, markdownSource);
-		markdownMirrorCount += 1;
-		outputFiles.push(`${chapter.outputPath}.md`);
-
+		completedPages += batch.length;
 		emitProgress({
 			phase: "pages",
 			status: "progress",
-			current: chapterIndex + 1,
+			current: completedPages,
 			total: totalPages,
 		});
 	}
