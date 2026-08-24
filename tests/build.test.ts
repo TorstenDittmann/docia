@@ -94,6 +94,8 @@ Link back to [Intro](README.md).
 		const searchPath = resolve(fixture.rootDir, "dist", (searchIndexHref ?? "").slice(1));
 		expect(await Bun.file(searchPath).exists()).toBe(true);
 		const searchContents = await Bun.file(searchPath).text();
+		const searchFingerprint = Bun.hash(searchContents).toString(36).padStart(8, "0").slice(-8);
+		expect(searchIndexHref).toBe(`/search-index-${searchFingerprint}.json`);
 
 		const stylesheetMatch = /<link\s+rel="stylesheet"\s+href="([^"]+\.css)"\s*\/?>/.exec(
 			indexHtml,

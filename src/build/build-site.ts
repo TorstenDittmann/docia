@@ -216,7 +216,7 @@ export async function buildSite(
 		});
 	}
 
-	const searchIndex = await createSearchIndexArtifact(searchEntries);
+	const searchIndex = createSearchIndexArtifact(searchEntries);
 	for (const [chapterIndex, page] of renderedPages.entries()) {
 		const { chapter, contentHtml, headings, pageDescription, markdownSource } = page;
 
