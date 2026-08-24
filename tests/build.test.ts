@@ -68,7 +68,6 @@ Link back to [Intro](README.md).
 		const robotsPath = resolve(fixture.rootDir, "dist/robots.txt");
 		const sitemapPath = resolve(fixture.rootDir, "dist/sitemap.xml");
 		const llmsPath = resolve(fixture.rootDir, "dist/llms.txt");
-		const searchPath = resolve(fixture.rootDir, "dist/search-index.json");
 		const assetPath = resolve(fixture.rootDir, "dist/asset.txt");
 		const indexMarkdownPath = resolve(fixture.rootDir, "dist/index.html.md");
 		const guideMarkdownPath = resolve(fixture.rootDir, "dist/guide/index.html.md");
@@ -78,7 +77,6 @@ Link back to [Intro](README.md).
 		expect(await Bun.file(robotsPath).exists()).toBe(true);
 		expect(await Bun.file(sitemapPath).exists()).toBe(true);
 		expect(await Bun.file(llmsPath).exists()).toBe(true);
-		expect(await Bun.file(searchPath).exists()).toBe(true);
 		expect(await Bun.file(assetPath).exists()).toBe(true);
 		expect(await Bun.file(indexMarkdownPath).exists()).toBe(true);
 		expect(await Bun.file(guideMarkdownPath).exists()).toBe(true);
@@ -89,10 +87,18 @@ Link back to [Intro](README.md).
 		const searchIndexHref = /<meta name="docia-search-index" content="([^"]+)"\s*\/?>/.exec(
 			indexHtml,
 		)?.[1];
-		expect(searchIndexHref).toMatch(/^\/search-index\.json\?v=[a-f0-9]{16}$/);
+		expect(searchIndexHref).toMatch(/^\/search-index-[a-f0-9]{16}\.json$/);
 		expect(indexHtml).toContain(
 			`<link rel="preload" href="${searchIndexHref}" as="fetch" crossorigin="anonymous"/>`,
 		);
+		const searchPath = resolve(fixture.rootDir, "dist", (searchIndexHref ?? "").slice(1));
+		expect(await Bun.file(searchPath).exists()).toBe(true);
+		const searchContents = await Bun.file(searchPath).text();
+		const searchFingerprint = new Bun.CryptoHasher("sha256")
+			.update(searchContents)
+			.digest("hex")
+			.slice(0, 16);
+		expect(searchIndexHref).toBe(`/search-index-${searchFingerprint}.json`);
 
 		const stylesheetMatch = /<link\s+rel="stylesheet"\s+href="([^"]+\.css)"\s*\/?>/.exec(
 			indexHtml,
@@ -123,8 +129,9 @@ Link back to [Intro](README.md).
 		expect(llmsTxt).toContain("## Docs");
 		expect(llmsTxt).toContain("https://docs.example.com/index.html.md");
 		expect(llmsTxt).toContain("https://docs.example.com/guide/index.html.md");
+		expect(llmsTxt).toContain(`https://docs.example.com${searchIndexHref}`);
 
-		const searchPayload = (await Bun.file(searchPath).json()) as {
+		const searchPayload = JSON.parse(searchContents) as {
 			pages: Array<{ routePath: string }>;
 		};
 		expect(searchPayload.pages.length).toBe(2);

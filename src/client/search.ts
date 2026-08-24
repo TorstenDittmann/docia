@@ -679,14 +679,15 @@ function mountMobileNav(): () => void {
 
 export function initSearch(): () => void {
 	const basePath = readMetaContent("docia-base-path") ?? "/";
-	const searchIndexHref =
-		readMetaContent("docia-search-index") ?? toBasePathHref(basePath, "/search-index.json");
+	const searchIndexHref = readMetaContent("docia-search-index");
 	const markdownHref =
 		readMetaContent("docia-markdown-url") ??
 		toBasePathHref(basePath, `${window.location.pathname}.md`);
 	const llmsHref = readMetaContent("docia-llms-url") ?? toBasePathHref(basePath, "/llms.txt");
 
-	const cleanupCommandMenu = mountCommandMenu(basePath, searchIndexHref);
+	const cleanupCommandMenu = searchIndexHref
+		? mountCommandMenu(basePath, searchIndexHref)
+		: () => {};
 	const cleanupPageAiMenu = mountPageAiMenu(markdownHref, llmsHref);
 	const cleanupMobileNav = mountMobileNav();
 

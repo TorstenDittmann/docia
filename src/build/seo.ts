@@ -35,7 +35,11 @@ function toMarkdownPageHref(config: ResolvedConfig, outputPath: string): string 
 	return toBasePathHref(config.basePath, `/${encodePathForHref(`${outputPath}.md`)}`);
 }
 
-function buildLlmsTxt(config: ResolvedConfig, graph: SummaryGraph): string {
+function buildLlmsTxt(
+	config: ResolvedConfig,
+	graph: SummaryGraph,
+	searchIndexFileName: string,
+): string {
 	const lines: string[] = [];
 	lines.push(`# ${config.site.title}`);
 	lines.push("");
@@ -65,10 +69,11 @@ function buildLlmsTxt(config: ResolvedConfig, graph: SummaryGraph): string {
 
 	const llmsHref = maybeAbsoluteUrl(config, toBasePathHref(config.basePath, "/llms.txt"));
 	const sitemapHref = maybeAbsoluteUrl(config, toBasePathHref(config.basePath, "/sitemap.xml"));
-	const searchHref = maybeAbsoluteUrl(
-		config,
-		toBasePathHref(config.basePath, "/search-index.json"),
+	const searchIndexHref = toBasePathHref(
+		config.basePath,
+		`/${encodePathForHref(searchIndexFileName)}`,
 	);
+	const searchHref = maybeAbsoluteUrl(config, searchIndexHref);
 
 	lines.push(
 		`- [llms.txt](${llmsHref ?? toBasePathHref(config.basePath, "/llms.txt")}): Index of LLM-facing docs links`,
@@ -76,9 +81,7 @@ function buildLlmsTxt(config: ResolvedConfig, graph: SummaryGraph): string {
 	lines.push(
 		`- [Sitemap](${sitemapHref ?? toBasePathHref(config.basePath, "/sitemap.xml")}): XML sitemap for the documentation site`,
 	);
-	lines.push(
-		`- [Search Index](${searchHref ?? toBasePathHref(config.basePath, "/search-index.json")}): Client-side search data`,
-	);
+	lines.push(`- [Search Index](${searchHref ?? searchIndexHref}): Client-side search data`);
 
 	return `${lines.join("\n")}\n`;
 }
@@ -86,6 +89,7 @@ function buildLlmsTxt(config: ResolvedConfig, graph: SummaryGraph): string {
 export async function emitSeoArtifacts(
 	config: ResolvedConfig,
 	graph: SummaryGraph,
+	searchIndexFileName: string,
 ): Promise<string[]> {
 	const emittedFiles: string[] = [];
 
@@ -107,7 +111,7 @@ export async function emitSeoArtifacts(
 	await Bun.write(resolve(config.outDirAbsolute, "robots.txt"), robotsTxt);
 	emittedFiles.push("robots.txt");
 
-	const llmsTxt = buildLlmsTxt(config, graph);
+	const llmsTxt = buildLlmsTxt(config, graph, searchIndexFileName);
 	await Bun.write(resolve(config.outDirAbsolute, "llms.txt"), llmsTxt);
 	emittedFiles.push("llms.txt");
 

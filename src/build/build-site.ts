@@ -228,7 +228,7 @@ export async function buildSite(
 			headings,
 			pageDescription,
 			assets,
-			searchIndexCacheKey: searchIndex.cacheKey,
+			searchIndexFileName: searchIndex.fileName,
 		});
 
 		const outputPath = resolve(config.outDirAbsolute, chapter.outputPath);
@@ -255,8 +255,8 @@ export async function buildSite(
 	const searchAndSeoStartedAt = Date.now();
 	emitProgress({ phase: "search-seo", status: "start" });
 	await emitSearchIndex(config.outDirAbsolute, searchIndex);
-	outputFiles.push("search-index.json");
-	const emittedSeoFiles = await emitSeoArtifacts(config, graph);
+	outputFiles.push(searchIndex.fileName);
+	const emittedSeoFiles = await emitSeoArtifacts(config, graph, searchIndex.fileName);
 	outputFiles.push(...emittedSeoFiles);
 	emitProgress({ phase: "search-seo", status: "end" });
 	const searchAndSeoMs = Date.now() - searchAndSeoStartedAt;
