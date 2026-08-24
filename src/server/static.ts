@@ -181,7 +181,7 @@ export async function serveStaticRequest(options: ServeStaticRequestOptions): Pr
 	}
 
 	const response = new Response(Bun.file(resolved.absolutePath));
-	const isVersionedSearchIndex = /^search-index-[a-z0-9]{8}\.json$/.test(resolved.relativePath);
+	const isVersionedSearchIndex = /^search-index-[a-z0-9]{13}\.json$/.test(resolved.relativePath);
 	if (isVersionedSearchIndex) {
 		response.headers.set("cache-control", "public, max-age=31536000, immutable");
 	} else if (options.noCache) {

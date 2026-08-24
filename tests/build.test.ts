@@ -87,14 +87,14 @@ Link back to [Intro](README.md).
 		const searchIndexHref = /<meta name="docia-search-index" content="([^"]+)"\s*\/?>/.exec(
 			indexHtml,
 		)?.[1];
-		expect(searchIndexHref).toMatch(/^\/search-index-[a-z0-9]{8}\.json$/);
+		expect(searchIndexHref).toMatch(/^\/search-index-[a-z0-9]{13}\.json$/);
 		expect(indexHtml).toContain(
 			`<link rel="preload" href="${searchIndexHref}" as="fetch" crossorigin="anonymous"/>`,
 		);
 		const searchPath = resolve(fixture.rootDir, "dist", (searchIndexHref ?? "").slice(1));
 		expect(await Bun.file(searchPath).exists()).toBe(true);
 		const searchContents = await Bun.file(searchPath).text();
-		const searchFingerprint = Bun.hash(searchContents).toString(36).padStart(8, "0").slice(-8);
+		const searchFingerprint = Bun.hash(searchContents).toString(36).padStart(13, "0");
 		expect(searchIndexHref).toBe(`/search-index-${searchFingerprint}.json`);
 
 		const stylesheetMatch = /<link\s+rel="stylesheet"\s+href="([^"]+\.css)"\s*\/?>/.exec(
@@ -146,7 +146,7 @@ Link back to [Intro](README.md).
 
 		const rebuilt = await buildSite(loaded.config);
 		const rebuiltSearchIndex = rebuilt.outputFiles.find((outputFile) =>
-			/^search-index-[a-z0-9]{8}\.json$/.test(outputFile),
+			/^search-index-[a-z0-9]{13}\.json$/.test(outputFile),
 		);
 		expect(rebuiltSearchIndex).toBe(searchIndexHref?.slice(1));
 	});
