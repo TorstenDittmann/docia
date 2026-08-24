@@ -132,8 +132,10 @@ Link back to [Intro](README.md).
 		expect(llmsTxt).toContain(`https://docs.example.com${searchIndexHref}`);
 
 		const searchPayload = JSON.parse(searchContents) as {
+			generatedAt: string;
 			pages: Array<{ routePath: string }>;
 		};
+		expect(Number.isNaN(Date.parse(searchPayload.generatedAt))).toBe(false);
 		expect(searchPayload.pages.length).toBe(2);
 		expect(searchPayload.pages.map((page) => page.routePath)).toContain("/");
 		expect(searchPayload.pages.map((page) => page.routePath)).toContain("/guide/");

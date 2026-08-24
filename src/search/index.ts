@@ -32,6 +32,7 @@ export function createSearchEntry(input: SearchIndexEntry): SearchIndexEntry {
 export function createSearchIndexArtifact(entries: SearchIndexEntry[]): SearchIndexArtifact {
 	const indexData = {
 		version: 1,
+		generatedAt: new Date().toISOString(),
 		pages: entries,
 	};
 	const contents = JSON.stringify(indexData);
