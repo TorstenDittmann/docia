@@ -1,6 +1,11 @@
 import { resolve } from "node:path";
 import type { SearchIndexEntry } from "./types";
 
+export interface SearchIndexArtifact {
+	cacheKey: string;
+	contents: string;
+}
+
 function normalizeText(input: string): string {
 	return input.replace(/\s+/g, " ").trim();
 }
@@ -24,17 +29,30 @@ export function createSearchEntry(input: SearchIndexEntry): SearchIndexEntry {
 	};
 }
 
-export async function emitSearchIndex(
-	outDirAbsolute: string,
-	entries: SearchIndexEntry[],
-): Promise<void> {
-	const payload = {
+export function createSearchIndexArtifact(entries: SearchIndexEntry[]): SearchIndexArtifact {
+	const indexData = {
 		version: 1,
-		generatedAt: new Date().toISOString(),
 		pages: entries,
 	};
+	const cacheKey = new Bun.CryptoHasher("sha256")
+		.update(JSON.stringify(indexData))
+		.digest("hex")
+		.slice(0, 16);
 
-	await Bun.write(resolve(outDirAbsolute, "search-index.json"), JSON.stringify(payload));
+	return {
+		cacheKey,
+		contents: JSON.stringify({
+			...indexData,
+			generatedAt: new Date().toISOString(),
+		}),
+	};
+}
+
+export async function emitSearchIndex(
+	outDirAbsolute: string,
+	artifact: SearchIndexArtifact,
+): Promise<void> {
+	await Bun.write(resolve(outDirAbsolute, "search-index.json"), artifact.contents);
 }
 
 export type { SearchIndexEntry } from "./types";

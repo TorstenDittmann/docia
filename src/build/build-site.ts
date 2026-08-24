@@ -6,7 +6,7 @@ import type { ResolvedConfig } from "../config/types";
 import { CliError } from "../errors";
 import { createMarkdownEngine } from "../markdown";
 import { renderPageLayout } from "../render";
-import { createSearchEntry, emitSearchIndex } from "../search";
+import { createSearchEntry, createSearchIndexArtifact, emitSearchIndex } from "../search";
 import { toBasePathHref } from "../utils/html";
 import { buildClientAssets } from "./client-assets";
 import { emitSeoArtifacts } from "./seo";
@@ -181,7 +181,8 @@ export async function buildSite(
 	const totalPages = graph.chapters.length;
 	const pagesStartedAt = Date.now();
 	emitProgress({ phase: "pages", status: "start", total: totalPages });
-	for (const [chapterIndex, chapter] of graph.chapters.entries()) {
+	const renderedPages = [];
+	for (const chapter of graph.chapters) {
 		const chapterFile = Bun.file(chapter.sourceAbsolutePath);
 		if (!(await chapterFile.exists())) {
 			throw new CliError(
@@ -198,24 +199,36 @@ export async function buildSite(
 			config.basePath,
 		);
 
-		searchEntries.push(
-			createSearchEntry({
-				id: chapter.id,
-				title: chapter.title,
-				routePath: chapter.routePath,
-				sourcePath: chapter.sourcePath,
-				text: rendered.searchText,
-			}),
-		);
+		const searchEntry = createSearchEntry({
+			id: chapter.id,
+			title: chapter.title,
+			routePath: chapter.routePath,
+			sourcePath: chapter.sourcePath,
+			text: rendered.searchText,
+		});
+		searchEntries.push(searchEntry);
+		renderedPages.push({
+			chapter,
+			contentHtml,
+			headings: rendered.headings,
+			pageDescription: buildPageDescription(rendered.plainText),
+			markdownSource,
+		});
+	}
+
+	const searchIndex = createSearchIndexArtifact(searchEntries);
+	for (const [chapterIndex, page] of renderedPages.entries()) {
+		const { chapter, contentHtml, headings, pageDescription, markdownSource } = page;
 
 		const html = renderPageLayout({
 			config,
 			graph,
 			chapter,
 			contentHtml,
-			headings: rendered.headings,
-			pageDescription: buildPageDescription(rendered.plainText),
+			headings,
+			pageDescription,
 			assets,
+			searchIndexCacheKey: searchIndex.cacheKey,
 		});
 
 		const outputPath = resolve(config.outDirAbsolute, chapter.outputPath);
@@ -241,7 +254,7 @@ export async function buildSite(
 
 	const searchAndSeoStartedAt = Date.now();
 	emitProgress({ phase: "search-seo", status: "start" });
-	await emitSearchIndex(config.outDirAbsolute, searchEntries);
+	await emitSearchIndex(config.outDirAbsolute, searchIndex);
 	outputFiles.push("search-index.json");
 	const emittedSeoFiles = await emitSeoArtifacts(config, graph);
 	outputFiles.push(...emittedSeoFiles);

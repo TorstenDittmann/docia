@@ -221,7 +221,7 @@ function mountCommandMenu(basePath: string, searchIndexHref: string): () => void
 			const searchInstance = createMiniSearch();
 
 			try {
-				const response = await fetch(searchIndexHref, { cache: "no-store" });
+				const response = await fetch(searchIndexHref);
 				if (!response.ok) {
 					miniSearch = searchInstance;
 					return miniSearch;

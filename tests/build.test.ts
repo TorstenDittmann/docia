@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
 import { buildSite } from "../src/build";
 import { loadConfig } from "../src/config/load-config";
+import { serveStaticRequest } from "../src/server/static";
 import { createTestProjectFixture } from "./helpers/project-fixture";
 
 const cleanupTasks: Array<() => Promise<void>> = [];
@@ -85,6 +86,13 @@ Link back to [Intro](README.md).
 		const indexHtml = await Bun.file(indexPath).text();
 		expect(indexHtml).toContain('<link rel="canonical"');
 		expect(indexHtml).toContain('id="gd-command-input"');
+		const searchIndexHref = /<meta name="docia-search-index" content="([^"]+)"\s*\/?>/.exec(
+			indexHtml,
+		)?.[1];
+		expect(searchIndexHref).toMatch(/^\/search-index\.json\?v=[a-f0-9]{16}$/);
+		expect(indexHtml).toContain(
+			`<link rel="preload" href="${searchIndexHref}" as="fetch" crossorigin="anonymous"/>`,
+		);
 
 		const stylesheetMatch = /<link\s+rel="stylesheet"\s+href="([^"]+\.css)"\s*\/?>/.exec(
 			indexHtml,
@@ -122,5 +130,14 @@ Link back to [Intro](README.md).
 		expect(searchPayload.pages.length).toBe(2);
 		expect(searchPayload.pages.map((page) => page.routePath)).toContain("/");
 		expect(searchPayload.pages.map((page) => page.routePath)).toContain("/guide/");
+
+		const searchResponse = await serveStaticRequest({
+			config: loaded.config,
+			request: new Request(`http://localhost${searchIndexHref}`),
+			noCache: true,
+		});
+		expect(searchResponse.headers.get("cache-control")).toBe(
+			"public, max-age=31536000, immutable",
+		);
 	});
 });
