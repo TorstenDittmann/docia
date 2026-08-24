@@ -1,24 +1,43 @@
 {
 	"name": "docia",
 	"version": "0.0.15",
+	"description": "Fast, static, agent-ready documentation sites from Markdown.",
+	"keywords": [
+		"bun",
+		"documentation",
+		"llms-txt",
+		"markdown",
+		"static-site-generator"
+	],
+	"homepage": "https://docia.xyz",
+	"bugs": {
+		"url": "https://github.com/TorstenDittmann/docia/issues"
+	},
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/TorstenDittmann/docia.git"
+	},
 	"bin": {
 		"docia": "./src/cli.ts"
 	},
 	"files": [
 		"src",
-		"README.md"
+		"README.md",
+		"CHANGELOG.md"
 	],
 	"type": "module",
-	"module": "src/cli.ts",
+	"module": "./src/index.ts",
+	"types": "./src/index.ts",
 	"exports": {
 		".": {
 			"types": "./src/index.ts",
 			"default": "./src/index.ts"
-		},
-		"./cli": {
-			"types": "./src/cli.ts",
-			"default": "./src/cli.ts"
 		}
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
 	},
 	"scripts": {
 		"docia": "bun run src/cli.ts --config docs/docia.config.ts",
@@ -27,12 +46,14 @@
 		"serve": "bun run src/cli.ts serve --config docs/docia.config.ts",
 		"check": "bun run src/cli.ts check --config docs/docia.config.ts",
 		"test": "bun test --parallel",
+		"typecheck": "tsc --noEmit",
 		"lint": "oxlint",
 		"lint:fix": "oxlint --fix",
 		"fmt": "oxfmt",
 		"fmt:check": "oxfmt --check",
 		"deps:check": "bun dedupe --check",
-		"verify": "bun run --parallel lint fmt:check test deps:check",
+		"verify": "bun run --parallel lint fmt:check typecheck test deps:check",
+		"prepublishOnly": "bun run verify",
 		"build:binary": "bun build --compile --asset ./package.json ./src/cli.ts --outfile docia",
 		"build:binaries": "bun run scripts/build-binaries.ts"
 	},
@@ -48,10 +69,8 @@
 		"@types/react": "^19.2.13",
 		"@types/react-dom": "^19.2.3",
 		"oxfmt": "^0.28.0",
-		"oxlint": "^1.43.0"
-	},
-	"peerDependencies": {
-		"typescript": "^5"
+		"oxlint": "^1.43.0",
+		"typescript": "^5.9.3"
 	},
 	"engines": {
 		"bun": ">=1.4.0"

@@ -61,8 +61,18 @@ This chapter is a starting point for your docs.
 `,
 		},
 		{
-			path: "public/.gitkeep",
-			contents: "",
+			path: "public/favicon.svg",
+			contents: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#0d4f8f"/>
+  <path d="M18 15h18c7.7 0 14 6.3 14 14v20H32c-7.7 0-14-6.3-14-14V15Zm8 9v11c0 3.3 2.7 6 6 6h10V29c0-2.8-2.2-5-5-5H26Z" fill="white"/>
+</svg>
+`,
+		},
+		{
+			path: ".gitignore",
+			contents: `dist/
+.DS_Store
+`,
 		},
 	];
 }

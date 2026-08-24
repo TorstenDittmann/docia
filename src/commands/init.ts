@@ -6,7 +6,9 @@ import { readBooleanFlag, readStringFlag } from "../utils/args";
 import { toTitleCaseFromName } from "../utils/strings";
 
 function printInitHelp(): void {
-	console.log("Usage: docia init [directory] [--title <name>] [--force]");
+	console.log(
+		"Usage: docia init [directory] [--title <name>] [--description <text>] [--lang <code>] [--force]",
+	);
 	console.log("");
 	console.log("Create a new docia project scaffold.");
 }

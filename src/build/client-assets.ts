@@ -5,17 +5,26 @@ import { toBasePathHref } from "../utils/html";
 // @ts-expect-error Bun's text import attribute
 import mainTs from "../client/main.ts" with { type: "text" };
 // @ts-expect-error Bun's text import attribute
+import contentTs from "../client/content.ts" with { type: "text" };
+// @ts-expect-error Bun's text import attribute
+import liveReloadTs from "../client/live-reload.ts" with { type: "text" };
+// @ts-expect-error Bun's text import attribute
 import routerTs from "../client/router.ts" with { type: "text" };
 // @ts-expect-error Bun's text import attribute
 import searchTs from "../client/search.ts" with { type: "text" };
 // @ts-expect-error Bun's text import attribute
 import stylesCss from "../client/styles.css" with { type: "text" };
+// @ts-expect-error Bun's text import attribute
+import themeTs from "../client/theme.ts" with { type: "text" };
 
 const CLIENT_FILES = {
 	"main.ts": mainTs,
+	"./content.ts": contentTs,
+	"./live-reload.ts": liveReloadTs,
 	"./router.ts": routerTs,
 	"./search.ts": searchTs,
 	"./styles.css": stylesCss,
+	"./theme.ts": themeTs,
 };
 
 export interface ClientAssetManifest {

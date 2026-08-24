@@ -1,16 +1,19 @@
-import { resolve } from "node:path";
+import { isAbsolute, parse, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { ConfigError } from "../errors";
 import { DEFAULT_CONFIG, DEFAULT_CONFIG_FILES } from "./defaults";
 import type {
-	GoodDocsConfig,
-	GoodDocsUserConfig,
+	DociaConfig,
+	DociaUserConfig,
+	ImageOptimizationConfig,
 	LoadedConfigResult,
 	MarkdownAutolinksConfig,
 	MarkdownHeadingsConfig,
 	ResolvedConfig,
 	SiteConfig,
 	SiteSocialsConfig,
+	ThemeColorMode,
+	ThemeConfig,
 } from "./types";
 
 export interface LoadConfigOptions {
@@ -27,6 +30,25 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 
 	const prototype = Object.getPrototypeOf(value);
 	return prototype === Object.prototype || prototype === null;
+}
+
+function rejectUnknownKeys(
+	value: Record<string, unknown>,
+	allowedKeys: readonly string[],
+	keyPath: string,
+): void {
+	const allowed = new Set(allowedKeys);
+	const unknownKeys = Object.keys(value).filter((key) => !allowed.has(key));
+	if (unknownKeys.length === 0) {
+		return;
+	}
+
+	const location = keyPath.length > 0 ? ` at \`${keyPath}\`` : "";
+	throw new ConfigError(
+		`Unknown config ${unknownKeys.length === 1 ? "key" : "keys"}${location}: ${unknownKeys
+			.map((key) => `\`${key}\``)
+			.join(", ")}.`,
+	);
 }
 
 function expectString(value: unknown, keyPath: string): string {
@@ -56,6 +78,33 @@ function expectBoolean(value: unknown, keyPath: string): boolean {
 	}
 
 	return value;
+}
+
+function expectIntegerInRange(
+	value: unknown,
+	keyPath: string,
+	minimum: number,
+	maximum: number,
+): number {
+	if (typeof value !== "number" || !Number.isInteger(value)) {
+		throw new ConfigError(`Invalid config value at \`${keyPath}\`: expected an integer.`);
+	}
+
+	if (value < minimum || value > maximum) {
+		throw new ConfigError(
+			`Invalid config value at \`${keyPath}\`: expected a value from ${minimum} to ${maximum}.`,
+		);
+	}
+
+	return value;
+}
+
+function expectStringArray(value: unknown, keyPath: string): string[] {
+	if (!Array.isArray(value)) {
+		throw new ConfigError(`Invalid config value at \`${keyPath}\`: expected an array.`);
+	}
+
+	return value.map((item, index) => expectString(item, `${keyPath}[${index}]`));
 }
 
 function normalizeBasePath(basePath: string): string {
@@ -102,6 +151,7 @@ function parseSocialsConfig(value: unknown): SiteSocialsConfig {
 	if (!isPlainObject(value)) {
 		throw new ConfigError("Invalid config value at `site.socials`: expected an object.");
 	}
+	rejectUnknownKeys(value, ["github", "x"], "site.socials");
 
 	const socials: SiteSocialsConfig = {};
 	if ("github" in value && value.github !== undefined) {
@@ -125,12 +175,12 @@ function parseAutolinksConfig(value: unknown): boolean | MarkdownAutolinksConfig
 	if (typeof value === "boolean") {
 		return value;
 	}
-
 	if (!isPlainObject(value)) {
 		throw new ConfigError(
 			"Invalid config value at `markdown.autolinks`: expected boolean or object.",
 		);
 	}
+	rejectUnknownKeys(value, ["url", "www", "email"], "markdown.autolinks");
 
 	const nextValue: MarkdownAutolinksConfig = {};
 	if ("url" in value && value.url !== undefined) {
@@ -150,12 +200,12 @@ function parseHeadingsConfig(value: unknown): boolean | MarkdownHeadingsConfig {
 	if (typeof value === "boolean") {
 		return value;
 	}
-
 	if (!isPlainObject(value)) {
 		throw new ConfigError(
 			"Invalid config value at `markdown.headings`: expected boolean or object.",
 		);
 	}
+	rejectUnknownKeys(value, ["ids"], "markdown.headings");
 
 	const nextValue: MarkdownHeadingsConfig = {};
 	if ("ids" in value && value.ids !== undefined) {
@@ -169,6 +219,21 @@ function parseSiteConfig(value: unknown): Partial<SiteConfig> {
 	if (!isPlainObject(value)) {
 		throw new ConfigError("Invalid config value at `site`: expected an object.");
 	}
+	rejectUnknownKeys(
+		value,
+		[
+			"title",
+			"description",
+			"language",
+			"url",
+			"socials",
+			"ogImage",
+			"githubEditBaseUrl",
+			"githubEditBranch",
+			"githubEditPath",
+		],
+		"site",
+	);
 
 	const nextValue: Partial<SiteConfig> = {};
 	if ("title" in value && value.title !== undefined) {
@@ -185,6 +250,9 @@ function parseSiteConfig(value: unknown): Partial<SiteConfig> {
 	}
 	if ("socials" in value && value.socials !== undefined) {
 		nextValue.socials = parseSocialsConfig(value.socials);
+	}
+	if ("ogImage" in value && value.ogImage !== undefined) {
+		nextValue.ogImage = expectStringAllowEmpty(value.ogImage, "site.ogImage");
 	}
 	if ("githubEditBaseUrl" in value && value.githubEditBaseUrl !== undefined) {
 		nextValue.githubEditBaseUrl = expectStringAllowEmpty(
@@ -208,12 +276,109 @@ function parseSiteConfig(value: unknown): Partial<SiteConfig> {
 	return nextValue;
 }
 
-function parseUserConfig(value: unknown): GoodDocsUserConfig {
+function parseThemeConfig(value: unknown): Partial<ThemeConfig> {
+	if (!isPlainObject(value)) {
+		throw new ConfigError("Invalid config value at `theme`: expected an object.");
+	}
+	rejectUnknownKeys(value, ["logo", "favicon", "accentColor", "customCss", "colorMode"], "theme");
+
+	const nextValue: Partial<ThemeConfig> = {};
+	if ("logo" in value && value.logo !== undefined) {
+		nextValue.logo = expectStringAllowEmpty(value.logo, "theme.logo");
+	}
+	if ("favicon" in value && value.favicon !== undefined) {
+		nextValue.favicon = expectStringAllowEmpty(value.favicon, "theme.favicon");
+	}
+	if ("accentColor" in value && value.accentColor !== undefined) {
+		nextValue.accentColor = expectStringAllowEmpty(value.accentColor, "theme.accentColor");
+	}
+	if ("customCss" in value && value.customCss !== undefined) {
+		nextValue.customCss = expectStringArray(value.customCss, "theme.customCss");
+	}
+	if ("colorMode" in value && value.colorMode !== undefined) {
+		const colorMode = expectString(value.colorMode, "theme.colorMode");
+		if (colorMode !== "system" && colorMode !== "light" && colorMode !== "dark") {
+			throw new ConfigError(
+				"Invalid config value at `theme.colorMode`: expected `system`, `light`, or `dark`.",
+			);
+		}
+		nextValue.colorMode = colorMode as ThemeColorMode;
+	}
+
+	return nextValue;
+}
+
+function parseImageOptimizationConfig(value: unknown): Partial<ImageOptimizationConfig> {
+	if (!isPlainObject(value)) {
+		throw new ConfigError("Invalid config value at `images`: expected an object.");
+	}
+	rejectUnknownKeys(
+		value,
+		["optimize", "jpegQuality", "webpQuality", "pngCompressionLevel", "maxPixels"],
+		"images",
+	);
+
+	const nextValue: Partial<ImageOptimizationConfig> = {};
+	if ("optimize" in value && value.optimize !== undefined) {
+		nextValue.optimize = expectBoolean(value.optimize, "images.optimize");
+	}
+	if ("jpegQuality" in value && value.jpegQuality !== undefined) {
+		nextValue.jpegQuality = expectIntegerInRange(
+			value.jpegQuality,
+			"images.jpegQuality",
+			1,
+			100,
+		);
+	}
+	if ("webpQuality" in value && value.webpQuality !== undefined) {
+		nextValue.webpQuality = expectIntegerInRange(
+			value.webpQuality,
+			"images.webpQuality",
+			1,
+			100,
+		);
+	}
+	if ("pngCompressionLevel" in value && value.pngCompressionLevel !== undefined) {
+		nextValue.pngCompressionLevel = expectIntegerInRange(
+			value.pngCompressionLevel,
+			"images.pngCompressionLevel",
+			0,
+			9,
+		);
+	}
+	if ("maxPixels" in value && value.maxPixels !== undefined) {
+		nextValue.maxPixels = expectIntegerInRange(
+			value.maxPixels,
+			"images.maxPixels",
+			1,
+			1_000_000_000,
+		);
+	}
+
+	return nextValue;
+}
+
+function parseUserConfig(value: unknown): DociaUserConfig {
 	if (!isPlainObject(value)) {
 		throw new ConfigError("Config file must export an object as its default export.");
 	}
+	rejectUnknownKeys(
+		value,
+		[
+			"srcDir",
+			"outDir",
+			"publicDir",
+			"basePath",
+			"prettyUrls",
+			"site",
+			"theme",
+			"images",
+			"markdown",
+		],
+		"",
+	);
 
-	const config: GoodDocsUserConfig = {};
+	const config: DociaUserConfig = {};
 	if ("srcDir" in value && value.srcDir !== undefined) {
 		config.srcDir = expectString(value.srcDir, "srcDir");
 	}
@@ -232,14 +397,41 @@ function parseUserConfig(value: unknown): GoodDocsUserConfig {
 	if ("site" in value && value.site !== undefined) {
 		config.site = parseSiteConfig(value.site);
 	}
+	if ("theme" in value && value.theme !== undefined) {
+		config.theme = parseThemeConfig(value.theme);
+	}
+	if ("images" in value && value.images !== undefined) {
+		config.images = parseImageOptimizationConfig(value.images);
+	}
 
 	if ("markdown" in value && value.markdown !== undefined) {
 		if (!isPlainObject(value.markdown)) {
 			throw new ConfigError("Invalid config value at `markdown`: expected an object.");
 		}
+		rejectUnknownKeys(
+			value.markdown,
+			[
+				"tables",
+				"strikethrough",
+				"tasklists",
+				"autolinks",
+				"headings",
+				"hardSoftBreaks",
+				"wikiLinks",
+				"underline",
+				"latexMath",
+				"collapseWhitespace",
+				"permissiveAtxHeaders",
+				"noIndentedCodeBlocks",
+				"noHtmlBlocks",
+				"noHtmlSpans",
+				"tagFilter",
+			],
+			"markdown",
+		);
 
 		const markdown = value.markdown;
-		const nextValue: GoodDocsUserConfig["markdown"] = {};
+		const nextValue: DociaUserConfig["markdown"] = {};
 
 		if ("tables" in markdown && markdown.tables !== undefined) {
 			nextValue.tables = expectBoolean(markdown.tables, "markdown.tables");
@@ -308,10 +500,12 @@ function parseUserConfig(value: unknown): GoodDocsUserConfig {
 	return config;
 }
 
-function mergeConfig(userConfig: GoodDocsUserConfig): GoodDocsConfig {
-	const merged: GoodDocsConfig = {
+function mergeConfig(userConfig: DociaUserConfig): DociaConfig {
+	const merged: DociaConfig = {
 		...DEFAULT_CONFIG,
 		site: { ...DEFAULT_CONFIG.site },
+		theme: { ...DEFAULT_CONFIG.theme },
+		images: { ...DEFAULT_CONFIG.images },
 		markdown: { ...DEFAULT_CONFIG.markdown },
 	};
 
@@ -334,6 +528,18 @@ function mergeConfig(userConfig: GoodDocsUserConfig): GoodDocsConfig {
 		merged.site = {
 			...merged.site,
 			...userConfig.site,
+		};
+	}
+	if (userConfig.theme !== undefined) {
+		merged.theme = {
+			...merged.theme,
+			...userConfig.theme,
+		};
+	}
+	if (userConfig.images !== undefined) {
+		merged.images = {
+			...merged.images,
+			...userConfig.images,
 		};
 	}
 	if (userConfig.markdown !== undefined) {
@@ -371,8 +577,51 @@ function mergeConfig(userConfig: GoodDocsUserConfig): GoodDocsConfig {
 	merged.site.githubEditBaseUrl = normalizeOptionalUrl(merged.site.githubEditBaseUrl);
 	merged.site.githubEditBranch = merged.site.githubEditBranch.trim() || "main";
 	merged.site.githubEditPath = normalizePathPrefix(merged.site.githubEditPath);
+	merged.theme.logo = merged.theme.logo.trim();
+	merged.theme.favicon = merged.theme.favicon.trim();
+	merged.theme.accentColor = merged.theme.accentColor.trim();
+	merged.theme.customCss = merged.theme.customCss.map((href) => href.trim());
 
 	return merged;
+}
+
+function isSameOrInside(parentPath: string, childPath: string): boolean {
+	const relativePath = relative(parentPath, childPath);
+	return (
+		relativePath === "" ||
+		(!relativePath.startsWith(`..${sep}`) && relativePath !== ".." && !isAbsolute(relativePath))
+	);
+}
+
+function validateOutputPath(config: ResolvedConfig): void {
+	const outputPath = config.outDirAbsolute;
+	const filesystemRoot = parse(outputPath).root;
+
+	if (outputPath === filesystemRoot) {
+		throw new ConfigError(
+			"Unsafe `outDir`: refusing to use a filesystem root as build output.",
+		);
+	}
+
+	if (isSameOrInside(outputPath, config.cwd)) {
+		throw new ConfigError(
+			"Unsafe `outDir`: build output cannot be the project directory or one of its parents.",
+		);
+	}
+
+	for (const [label, protectedPath] of [
+		["srcDir", config.srcDirAbsolute],
+		["publicDir", config.publicDirAbsolute],
+	] as const) {
+		if (
+			isSameOrInside(outputPath, protectedPath) ||
+			isSameOrInside(protectedPath, outputPath)
+		) {
+			throw new ConfigError(
+				`Unsafe \`outDir\`: build output must not overlap \`${label}\` (${protectedPath}).`,
+			);
+		}
+	}
 }
 
 async function findDefaultConfigFile(cwd: string): Promise<string | null> {
@@ -446,6 +695,7 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<Loade
 		outDirAbsolute: resolve(cwd, merged.outDir),
 		publicDirAbsolute: resolve(cwd, merged.publicDir),
 	};
+	validateOutputPath(resolved);
 
 	return {
 		config: resolved,

@@ -57,10 +57,14 @@ function buildLlmsTxt(
 	lines.push("## Docs");
 	lines.push("");
 
-	for (const chapter of graph.chapters) {
+	for (const chapter of graph.chapters.filter(
+		(chapter) => chapter.frontmatter.noindex !== true && chapter.frontmatter.draft !== true,
+	)) {
 		const markdownHref = toMarkdownPageHref(config, chapter.outputPath);
 		const href = maybeAbsoluteUrl(config, markdownHref) ?? markdownHref;
-		lines.push(`- [${chapter.title}](${href}): Markdown source for ${chapter.routePath}`);
+		lines.push(
+			`- [${chapter.frontmatter.title ?? chapter.title}](${href}): Markdown source for ${chapter.routePath}`,
+		);
 	}
 
 	lines.push("");
@@ -94,6 +98,9 @@ export async function emitSeoArtifacts(
 	const emittedFiles: string[] = [];
 
 	const chapterUrls = graph.chapters
+		.filter(
+			(chapter) => chapter.frontmatter.noindex !== true && chapter.frontmatter.draft !== true,
+		)
 		.map((chapter) => {
 			const routeHref = toBasePathHref(config.basePath, chapter.routePath);
 			return maybeAbsoluteUrl(config, routeHref);

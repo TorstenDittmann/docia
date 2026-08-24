@@ -89,10 +89,37 @@ function normalizeWhitespace(input: string): string {
 
 function stripHeadingAnchor(html: string): string {
 	return html
+		.replace(
+			/<a[^>]*\bclass=(?:"[^"]*heading-anchor[^"]*"|'[^']*heading-anchor[^']*')[^>]*>[\s\S]*?<\/a>/gi,
+			"",
+		)
 		.replace(/<a[^>]*>([\s\S]*?)<\/a>/gi, "$1")
 		.replace(/<[^>]+>/g, " ")
 		.replace(/\s+/g, " ")
 		.trim();
+}
+
+function escapeHtmlAttribute(input: string): string {
+	return input
+		.replaceAll("&", "&amp;")
+		.replaceAll('"', "&quot;")
+		.replaceAll("<", "&lt;")
+		.replaceAll(">", "&gt;");
+}
+
+function addHeadingPermalinks(html: string): string {
+	return html.replace(HEADING_PATTERN, (fullMatch, level, attributes, body) => {
+		const attrs = String(attributes ?? "");
+		const idMatch = /\sid=(?:"([^"]+)"|'([^']+)')/.exec(attrs);
+		const id = idMatch?.[1] ?? idMatch?.[2];
+		if (!id || String(body).includes("heading-anchor")) {
+			return fullMatch;
+		}
+
+		const headingText = escapeHtmlAttribute(stripHeadingAnchor(String(body)));
+		const href = `#${encodeURIComponent(id)}`;
+		return `<h${level}${attrs}>${body}<a class="heading-anchor" href="${href}" aria-label="Link to ${headingText}">#</a></h${level}>`;
+	});
 }
 
 function decodeHtmlEntities(input: string): string {
@@ -187,7 +214,7 @@ export async function createMarkdownEngine(config: ResolvedConfig): Promise<Mark
 		});
 
 		const rawHtml = renderToStaticMarkup(markdownElement);
-		return highlightCodeBlocks(rawHtml, highlighter);
+		return addHeadingPermalinks(highlightCodeBlocks(rawHtml, highlighter));
 	};
 
 	const toPlainText = (markdown: string): string => {

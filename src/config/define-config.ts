@@ -1,5 +1,5 @@
-import type { GoodDocsUserConfig } from "./types";
+import type { DociaUserConfig } from "./types";
 
-export function defineConfig(config: GoodDocsUserConfig): GoodDocsUserConfig {
+export function defineConfig(config: DociaUserConfig): DociaUserConfig {
 	return config;
 }

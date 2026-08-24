@@ -1,7 +1,7 @@
 import { readdir } from "node:fs/promises";
 import { dirname, posix, resolve } from "node:path";
 import type { CommandContext } from "../cli-types";
-import { loadSummaryGraph } from "../book";
+import { loadSummaryGraph, resolveRedirectLocation } from "../book";
 import { loadConfig } from "../config/load-config";
 import { readStringFlag } from "../utils/args";
 
@@ -129,6 +129,25 @@ export async function runCheckCommand(context: CommandContext): Promise<number> 
 
 		outputToChapter.set(chapter.outputPath, chapter.sourcePath);
 	}
+	if (outputToChapter.has("404.html")) {
+		issues.push("The page slug `/404` conflicts with docia's generated `404.html` page.");
+	} else {
+		outputToChapter.set("404.html", "generated 404 page");
+	}
+
+	for (const chapter of graph.chapters) {
+		for (const redirectFrom of chapter.frontmatter.redirectFrom ?? []) {
+			const redirect = resolveRedirectLocation(redirectFrom, loaded.config.prettyUrls);
+			const existing = outputToChapter.get(redirect.outputPath);
+			if (existing) {
+				issues.push(
+					`Redirect \`${redirectFrom}\` in \`${chapter.sourcePath}\` conflicts with \`${existing}\` at \`${redirect.outputPath}\`.`,
+				);
+				continue;
+			}
+			outputToChapter.set(redirect.outputPath, `redirect from ${chapter.sourcePath}`);
+		}
+	}
 
 	const linkIssues: ChapterIssue[] = [];
 	for (const chapter of graph.chapters) {
@@ -156,6 +175,15 @@ export async function runCheckCommand(context: CommandContext): Promise<number> 
 				linkIssues.push({
 					chapterPath: chapter.sourcePath,
 					issue: `links to missing markdown file \`${normalizedTarget}\``,
+				});
+				continue;
+			}
+
+			const targetChapter = graph.chapterBySourcePath.get(normalizedTarget);
+			if (targetChapter?.frontmatter.draft === true && chapter.frontmatter.draft !== true) {
+				linkIssues.push({
+					chapterPath: chapter.sourcePath,
+					issue: `links to draft chapter \`${normalizedTarget}\``,
 				});
 			}
 		}

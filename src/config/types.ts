@@ -3,6 +3,16 @@ export interface SiteSocialsConfig {
 	x?: string;
 }
 
+export type ThemeColorMode = "system" | "light" | "dark";
+
+export interface ThemeConfig {
+	logo: string;
+	favicon: string;
+	accentColor: string;
+	customCss: string[];
+	colorMode: ThemeColorMode;
+}
+
 export interface SiteConfig {
 	title: string;
 	description: string;
@@ -43,27 +53,45 @@ export interface MarkdownConfig {
 	tagFilter: boolean;
 }
 
-export interface GoodDocsConfig {
+export interface ImageOptimizationConfig {
+	optimize: boolean;
+	jpegQuality: number;
+	webpQuality: number;
+	pngCompressionLevel: number;
+	maxPixels: number;
+}
+
+export interface DociaConfig {
 	srcDir: string;
 	outDir: string;
 	publicDir: string;
 	basePath: string;
 	prettyUrls: boolean;
 	site: SiteConfig;
+	theme: ThemeConfig;
+	images: ImageOptimizationConfig;
 	markdown: MarkdownConfig;
 }
 
-export interface GoodDocsUserConfig {
+export interface DociaUserConfig {
 	srcDir?: string;
 	outDir?: string;
 	publicDir?: string;
 	basePath?: string;
 	prettyUrls?: boolean;
 	site?: Partial<SiteConfig>;
+	theme?: Partial<ThemeConfig>;
+	images?: Partial<ImageOptimizationConfig>;
 	markdown?: Partial<MarkdownConfig>;
 }
 
-export interface ResolvedConfig extends GoodDocsConfig {
+/** @deprecated Use `DociaConfig`. */
+export type GoodDocsConfig = DociaConfig;
+
+/** @deprecated Use `DociaUserConfig`. */
+export type GoodDocsUserConfig = DociaUserConfig;
+
+export interface ResolvedConfig extends DociaConfig {
 	cwd: string;
 	configFilePath: string | null;
 	srcDirAbsolute: string;

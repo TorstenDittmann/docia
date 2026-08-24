@@ -134,8 +134,20 @@ function highlightText(text: string, terms: string[]): string {
 }
 
 async function copyToClipboard(text: string): Promise<boolean> {
-	await navigator.clipboard.writeText(text);
-	return true;
+	try {
+		await navigator.clipboard.writeText(text);
+		return true;
+	} catch {
+		const textarea = document.createElement("textarea");
+		textarea.value = text;
+		textarea.style.position = "fixed";
+		textarea.style.opacity = "0";
+		document.body.append(textarea);
+		textarea.select();
+		const copied = document.execCommand("copy");
+		textarea.remove();
+		return copied;
+	}
 }
 
 function addListener(
@@ -206,6 +218,7 @@ function mountCommandMenu(basePath: string, searchIndexHref: string): () => void
 	let miniSearch: MiniSearch<SearchIndexPage> | null = null;
 	let loadingPromise: Promise<MiniSearch<SearchIndexPage>> | null = null;
 	let displayedItems: SearchResultItem[] = [];
+	let loadedPages: SearchIndexPage[] = [];
 	let activeIndex = -1;
 
 	const ensureIndex = async (): Promise<MiniSearch<SearchIndexPage>> => {
@@ -229,6 +242,7 @@ function mountCommandMenu(basePath: string, searchIndexHref: string): () => void
 
 				const payload = (await response.json()) as SearchIndexPayload;
 				const pages = Array.isArray(payload.pages) ? payload.pages : [];
+				loadedPages = pages;
 
 				// Add documents to MiniSearch index
 				if (pages.length > 0) {
@@ -299,16 +313,17 @@ function mountCommandMenu(basePath: string, searchIndexHref: string): () => void
 
 		// If no query, show all pages sorted alphabetically by title
 		if (trimmedQuery.length === 0) {
-			const allPages = searchInstance.documentCount > 0 ? searchInstance.search("") : [];
-			return allPages.slice(0, 10).map((result) => {
-				const page = result as unknown as SearchIndexPage;
-				return {
-					title: page.title?.trim() || "Untitled",
-					href: toBasePathHref(basePath, page.routePath ?? "/"),
-					snippet: makeSnippet(page.text ?? "", []) || page.routePath || "",
-					terms: [],
-				};
-			});
+			return [...loadedPages]
+				.sort((left, right) => (left.title ?? "").localeCompare(right.title ?? ""))
+				.slice(0, 10)
+				.map((page) => {
+					return {
+						title: page.title?.trim() || "Untitled",
+						href: toBasePathHref(basePath, page.routePath ?? "/"),
+						snippet: makeSnippet(page.text ?? "", []) || page.routePath || "",
+						terms: [],
+					};
+				});
 		}
 
 		// Use MiniSearch for fuzzy, prefix, and TF-IDF ranked search

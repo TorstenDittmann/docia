@@ -1,6 +1,8 @@
 import { posix, resolve } from "node:path";
 import type { ResolvedConfig } from "../config/types";
 import { CliError } from "../errors";
+import { parseMarkdownDocument } from "../markdown/frontmatter";
+import { resolveChapterLocation } from "./routes";
 import type {
 	SummaryChapterEntry,
 	SummaryEntry,
@@ -134,59 +136,6 @@ function normalizeSourcePath(href: string, line: number): string {
 	return normalized;
 }
 
-function escapeRegExp(input: string): string {
-	return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function stripMarkdownExtension(pathValue: string): string {
-	return pathValue.replace(MARKDOWN_PATH_PATTERN, "");
-}
-
-function trimReadmeSuffix(pathValue: string): string {
-	const readmePattern = new RegExp(`(?:^|/)${escapeRegExp("README")}$`, "i");
-	return pathValue.replace(readmePattern, "");
-}
-
-function toRoutePath(sourcePath: string, prettyUrls: boolean): string {
-	const normalized = stripMarkdownExtension(sourcePath);
-	const withoutReadme = trimReadmeSuffix(normalized);
-	const cleaned = withoutReadme.replace(/^\//, "").replace(/\/$/, "");
-
-	if (prettyUrls) {
-		if (cleaned.length === 0) {
-			return "/";
-		}
-
-		return `/${cleaned}/`;
-	}
-
-	if (cleaned.length === 0) {
-		return "/index.html";
-	}
-
-	return `/${cleaned}.html`;
-}
-
-function toOutputPath(sourcePath: string, prettyUrls: boolean): string {
-	const normalized = stripMarkdownExtension(sourcePath);
-	const withoutReadme = trimReadmeSuffix(normalized);
-	const cleaned = withoutReadme.replace(/^\//, "").replace(/\/$/, "");
-
-	if (prettyUrls) {
-		if (cleaned.length === 0) {
-			return "index.html";
-		}
-
-		return `${cleaned}/index.html`;
-	}
-
-	if (cleaned.length === 0) {
-		return "index.html";
-	}
-
-	return `${cleaned}.html`;
-}
-
 function createEntryId(prefix: string, line: number): string {
 	return `${prefix}-${line}`;
 }
@@ -219,7 +168,30 @@ function flattenChapters(entries: SummaryEntry[]): SummaryChapterEntry[] {
 	return chapters;
 }
 
-export async function loadSummaryGraph(config: ResolvedConfig): Promise<SummaryGraph> {
+function withoutDraftEntries(entries: SummaryEntry[]): SummaryEntry[] {
+	const filtered: SummaryEntry[] = [];
+	for (const entry of entries) {
+		if (entry.kind === "chapter" && entry.frontmatter.draft === true) {
+			continue;
+		}
+
+		entry.children = withoutDraftEntries(entry.children);
+		if (entry.kind === "section" && entry.children.length === 0) {
+			continue;
+		}
+		filtered.push(entry);
+	}
+	return filtered;
+}
+
+export interface LoadSummaryGraphOptions {
+	includeDrafts?: boolean;
+}
+
+export async function loadSummaryGraph(
+	config: ResolvedConfig,
+	options: LoadSummaryGraphOptions = {},
+): Promise<SummaryGraph> {
 	const summaryPath = resolve(config.srcDirAbsolute, "SUMMARY.md");
 	const summaryFile = Bun.file(summaryPath);
 
@@ -298,6 +270,7 @@ export async function loadSummaryGraph(config: ResolvedConfig): Promise<SummaryG
 				);
 			}
 
+			const location = resolveChapterLocation(sourcePath, config.prettyUrls);
 			const chapterEntry: SummaryChapterEntry = {
 				id: createEntryId("chapter", item.line),
 				kind: "chapter",
@@ -305,8 +278,9 @@ export async function loadSummaryGraph(config: ResolvedConfig): Promise<SummaryG
 				href: item.href,
 				sourcePath,
 				sourceAbsolutePath,
-				routePath: toRoutePath(sourcePath, config.prettyUrls),
-				outputPath: toOutputPath(sourcePath, config.prettyUrls),
+				routePath: location.routePath,
+				outputPath: location.outputPath,
+				frontmatter: {},
 				depth,
 				line: item.line,
 				parentId: parent?.id ?? null,
@@ -330,7 +304,27 @@ export async function loadSummaryGraph(config: ResolvedConfig): Promise<SummaryG
 		stack.push({ depth: item.depth, entry });
 	}
 
-	const chapters = flattenChapters(rootEntries);
+	const allChapters = flattenChapters(rootEntries);
+	for (const chapter of allChapters) {
+		const chapterFile = Bun.file(chapter.sourceAbsolutePath);
+		if (!(await chapterFile.exists())) {
+			continue;
+		}
+
+		const parsed = parseMarkdownDocument(await chapterFile.text(), chapter.sourcePath);
+		chapter.frontmatter = parsed.frontmatter;
+		const location = resolveChapterLocation(
+			chapter.sourcePath,
+			config.prettyUrls,
+			parsed.frontmatter.slug,
+		);
+		chapter.routePath = location.routePath;
+		chapter.outputPath = location.outputPath;
+	}
+
+	const entries =
+		options.includeDrafts === false ? withoutDraftEntries(rootEntries) : rootEntries;
+	const chapters = flattenChapters(entries);
 	chapters.forEach((chapter, index) => {
 		const previous = chapters[index - 1];
 		const next = chapters[index + 1];
@@ -340,12 +334,25 @@ export async function loadSummaryGraph(config: ResolvedConfig): Promise<SummaryG
 		chapter.nextChapterId = next?.id ?? null;
 	});
 
+	const filteredEntryById = new Map<string, SummaryEntry>();
+	const filteredChapterBySourcePath = new Map<string, SummaryChapterEntry>();
+	const visit = (entryList: SummaryEntry[]): void => {
+		for (const entry of entryList) {
+			filteredEntryById.set(entry.id, entry);
+			if (entry.kind === "chapter") {
+				filteredChapterBySourcePath.set(entry.sourcePath, entry);
+			}
+			visit(entry.children);
+		}
+	};
+	visit(entries);
+
 	return {
 		summaryPath,
-		entries: rootEntries,
+		entries,
 		chapters,
-		chapterBySourcePath,
-		entryById,
+		chapterBySourcePath: filteredChapterBySourcePath,
+		entryById: filteredEntryById,
 		firstChapterId: chapters[0]?.id ?? null,
 		lastChapterId: chapters[chapters.length - 1]?.id ?? null,
 	};

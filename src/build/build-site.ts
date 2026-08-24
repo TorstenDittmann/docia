@@ -1,14 +1,16 @@
 import { cp, mkdir, rm, stat } from "node:fs/promises";
 import { dirname, posix, relative, resolve, sep } from "node:path";
-import { loadSummaryGraph } from "../book";
+import { loadSummaryGraph, resolveRedirectLocation } from "../book";
 import type { SummaryGraph } from "../book";
 import type { ResolvedConfig } from "../config/types";
 import { CliError } from "../errors";
-import { createMarkdownEngine } from "../markdown";
-import { renderPageLayout } from "../render";
+import { createMarkdownEngine, parseMarkdownDocument } from "../markdown";
+import { renderNotFoundPage, renderPageLayout, renderRedirectPage } from "../render";
 import { createSearchEntry, createSearchIndexArtifact, emitSearchIndex } from "../search";
 import { toBasePathHref } from "../utils/html";
 import { buildClientAssets } from "./client-assets";
+import { optimizePublicImages } from "./optimize-images";
+import type { ImageOptimizationResult } from "./optimize-images";
 import { emitSeoArtifacts } from "./seo";
 
 export interface BuildSiteResult {
@@ -19,10 +21,13 @@ export interface BuildSiteResult {
 	clientAssetCount: number;
 	searchDocumentCount: number;
 	markdownMirrorCount: number;
+	redirectCount: number;
+	imageOptimization: ImageOptimizationResult;
 	emittedSeoFiles: string[];
 	timing: {
 		totalMs: number;
 		cleanMs: number;
+		imagesMs: number;
 		assetsMs: number;
 		pagesMs: number;
 		searchAndSeoMs: number;
@@ -30,7 +35,7 @@ export interface BuildSiteResult {
 	outputFiles: string[];
 }
 
-export type BuildProgressPhase = "clean" | "assets" | "pages" | "search-seo";
+export type BuildProgressPhase = "clean" | "images" | "assets" | "pages" | "search-seo";
 export type BuildProgressStatus = "start" | "progress" | "end";
 
 export interface BuildProgressEvent {
@@ -43,7 +48,14 @@ export interface BuildProgressEvent {
 export interface BuildSiteOptions {
 	minifyAssets?: boolean;
 	sourcemapAssets?: Bun.BuildConfig["sourcemap"];
+	includeDrafts?: boolean;
+	liveReload?: boolean;
 	onProgress?: (event: BuildProgressEvent) => void;
+}
+
+interface RedirectArtifact {
+	outputPath: string;
+	targetRoutePath: string;
 }
 
 async function isDirectory(pathValue: string): Promise<boolean> {
@@ -62,6 +74,47 @@ function buildPageDescription(plainText: string): string {
 	}
 
 	return `${text.slice(0, 217)}...`;
+}
+
+function resolveRedirectArtifacts(config: ResolvedConfig, graph: SummaryGraph): RedirectArtifact[] {
+	const claimedOutputs = new Map<string, string>();
+	for (const chapter of graph.chapters) {
+		const existing = claimedOutputs.get(chapter.outputPath);
+		if (existing) {
+			throw new CliError(
+				`Duplicate output path \`${chapter.outputPath}\` for chapters \`${existing}\` and \`${chapter.sourcePath}\`.`,
+			);
+		}
+		claimedOutputs.set(chapter.outputPath, chapter.sourcePath);
+	}
+
+	if (claimedOutputs.has("404.html")) {
+		throw new CliError(
+			"The page slug `/404` conflicts with docia's generated `404.html` page.",
+		);
+	}
+	claimedOutputs.set("404.html", "generated 404 page");
+
+	const redirects: RedirectArtifact[] = [];
+	for (const chapter of graph.chapters) {
+		for (const redirectFrom of chapter.frontmatter.redirectFrom ?? []) {
+			const location = resolveRedirectLocation(redirectFrom, config.prettyUrls);
+			const existing = claimedOutputs.get(location.outputPath);
+			if (existing) {
+				throw new CliError(
+					`Redirect \`${redirectFrom}\` in ${chapter.sourcePath} conflicts with ${existing} at \`${location.outputPath}\`.`,
+				);
+			}
+
+			claimedOutputs.set(location.outputPath, `redirect from ${chapter.sourcePath}`);
+			redirects.push({
+				outputPath: location.outputPath,
+				targetRoutePath: chapter.routePath,
+			});
+		}
+	}
+
+	return redirects;
 }
 
 const EXTERNAL_LINK_PATTERN = /^(?:[a-zA-Z][a-zA-Z0-9+.-]*:|#|\/\/)/;
@@ -145,7 +198,8 @@ export async function buildSite(
 	};
 
 	const startedAt = Date.now();
-	const graph = await loadSummaryGraph(config);
+	const graph = await loadSummaryGraph(config, { includeDrafts: options.includeDrafts === true });
+	const redirects = resolveRedirectArtifacts(config, graph);
 	const markdownEngine = await createMarkdownEngine(config);
 	const searchEntries: ReturnType<typeof createSearchEntry>[] = [];
 	const outputFiles: string[] = [];
@@ -165,6 +219,22 @@ export async function buildSite(
 	}
 	emitProgress({ phase: "clean", status: "end" });
 	const cleanMs = Date.now() - cleanStartedAt;
+
+	const imagesStartedAt = Date.now();
+	emitProgress({ phase: "images", status: "start" });
+	const imageOptimization = copiedPublicDir
+		? await optimizePublicImages(config.publicDirAbsolute, config.outDirAbsolute, config.images)
+		: {
+				enabled: config.images.optimize,
+				discoveredCount: 0,
+				optimizedCount: 0,
+				unchangedCount: 0,
+				inputBytes: 0,
+				outputBytes: 0,
+				bytesSaved: 0,
+			};
+	emitProgress({ phase: "images", status: "end" });
+	const imagesMs = Date.now() - imagesStartedAt;
 
 	const assetsStartedAt = Date.now();
 	emitProgress({ phase: "assets", status: "start" });
@@ -191,7 +261,8 @@ export async function buildSite(
 		}
 
 		const markdownSource = await chapterFile.text();
-		const rendered = markdownEngine.renderPage(markdownSource);
+		const parsedDocument = parseMarkdownDocument(markdownSource, chapter.sourcePath);
+		const rendered = markdownEngine.renderPage(parsedDocument.body);
 		const contentHtml = rewriteChapterLinks(
 			rendered.html,
 			chapter.sourcePath,
@@ -201,7 +272,7 @@ export async function buildSite(
 
 		const searchEntry = createSearchEntry({
 			id: chapter.id,
-			title: chapter.title,
+			title: parsedDocument.frontmatter.title ?? chapter.title,
 			routePath: chapter.routePath,
 			sourcePath: chapter.sourcePath,
 			text: rendered.searchText,
@@ -211,14 +282,29 @@ export async function buildSite(
 			chapter,
 			contentHtml,
 			headings: rendered.headings,
-			pageDescription: buildPageDescription(rendered.plainText),
-			markdownSource,
+			pageDescription:
+				parsedDocument.frontmatter.description ?? buildPageDescription(rendered.plainText),
+			pageTitle: parsedDocument.frontmatter.title ?? chapter.title,
+			pageOgImage: parsedDocument.frontmatter.ogImage ?? config.site.ogImage,
+			noindex:
+				parsedDocument.frontmatter.noindex === true ||
+				parsedDocument.frontmatter.draft === true,
+			markdownSource: parsedDocument.body,
 		});
 	}
 
 	const searchIndex = createSearchIndexArtifact(searchEntries);
 	for (const [chapterIndex, page] of renderedPages.entries()) {
-		const { chapter, contentHtml, headings, pageDescription, markdownSource } = page;
+		const {
+			chapter,
+			contentHtml,
+			headings,
+			pageDescription,
+			pageTitle,
+			pageOgImage,
+			noindex,
+			markdownSource,
+		} = page;
 
 		const html = renderPageLayout({
 			config,
@@ -229,6 +315,10 @@ export async function buildSite(
 			pageDescription,
 			assets,
 			searchIndexFileName: searchIndex.fileName,
+			pageTitle,
+			pageOgImage,
+			noindex,
+			liveReload: options.liveReload === true,
 		});
 
 		const outputPath = resolve(config.outDirAbsolute, chapter.outputPath);
@@ -256,6 +346,20 @@ export async function buildSite(
 	emitProgress({ phase: "search-seo", status: "start" });
 	await emitSearchIndex(config.outDirAbsolute, searchIndex);
 	outputFiles.push(searchIndex.fileName);
+
+	for (const redirect of redirects) {
+		const redirectOutputPath = resolve(config.outDirAbsolute, redirect.outputPath);
+		await mkdir(dirname(redirectOutputPath), { recursive: true });
+		await Bun.write(
+			redirectOutputPath,
+			renderRedirectPage(config, assets, redirect.targetRoutePath),
+		);
+		outputFiles.push(redirect.outputPath);
+	}
+
+	await Bun.write(resolve(config.outDirAbsolute, "404.html"), renderNotFoundPage(config, assets));
+	outputFiles.push("404.html");
+
 	const emittedSeoFiles = await emitSeoArtifacts(config, graph, searchIndex.fileName);
 	outputFiles.push(...emittedSeoFiles);
 	emitProgress({ phase: "search-seo", status: "end" });
@@ -274,10 +378,13 @@ export async function buildSite(
 		clientAssetCount: assets.outputFiles.length,
 		searchDocumentCount: searchEntries.length,
 		markdownMirrorCount,
+		redirectCount: redirects.length,
+		imageOptimization,
 		emittedSeoFiles,
 		timing: {
 			totalMs,
 			cleanMs,
+			imagesMs,
 			assetsMs,
 			pagesMs,
 			searchAndSeoMs,

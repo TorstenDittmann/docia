@@ -1,68 +1,132 @@
-name: Publish Package
+name: Release
+
 on:
-    release:
-        types: [published]
+    push:
+        tags:
+            - "[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+    contents: read
 
 jobs:
-    publish-npm:
+    verify:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+            - name: Setup tools with mise
+              uses: jdx/mise-action@v4
+            - run: bun ci
+            - name: Validate release version
+              run: |
+                  package_version="$(bun -e 'console.log((await Bun.file("package.json").json()).version)')"
+                  if [ "$package_version" != "$GITHUB_REF_NAME" ]; then
+                    echo "Tag $GITHUB_REF_NAME does not match package version $package_version" >&2
+                    exit 1
+                  fi
+            - run: bun run verify
+            - run: bun pm pack --dry-run
+
+    build-assets:
+        needs: verify
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+            - name: Setup tools with mise
+              uses: jdx/mise-action@v4
+            - run: bun ci
+            - name: Build binaries
+              run: bun run build:binaries
+            - name: Create archives and checksums
+              run: |
+                  cd dist
+                  tar -czf "docia-v${GITHUB_REF_NAME}-darwin-x64.tar.gz" "docia-v${GITHUB_REF_NAME}-darwin-x64"
+                  tar -czf "docia-v${GITHUB_REF_NAME}-darwin-arm64.tar.gz" "docia-v${GITHUB_REF_NAME}-darwin-arm64"
+                  tar -czf "docia-v${GITHUB_REF_NAME}-linux-x64.tar.gz" "docia-v${GITHUB_REF_NAME}-linux-x64"
+                  tar -czf "docia-v${GITHUB_REF_NAME}-linux-arm64.tar.gz" "docia-v${GITHUB_REF_NAME}-linux-arm64"
+                  zip "docia-v${GITHUB_REF_NAME}-windows-x64.zip" "docia-v${GITHUB_REF_NAME}-windows-x64.exe"
+                  zip "docia-v${GITHUB_REF_NAME}-windows-arm64.zip" "docia-v${GITHUB_REF_NAME}-windows-arm64.exe"
+                  sha256sum *.tar.gz *.zip > SHA256SUMS
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: release-assets
+                  path: |
+                      dist/*.tar.gz
+                      dist/*.zip
+                      dist/SHA256SUMS
+                  if-no-files-found: error
+
+    smoke-unix:
+        needs: build-assets
+        strategy:
+            matrix:
+                os: [ubuntu-latest, macos-latest]
+        runs-on: ${{ matrix.os }}
+        steps:
+            - uses: actions/download-artifact@v4
+              with:
+                  name: release-assets
+                  path: dist
+            - name: Run packaged binary
+              run: |
+                  case "$RUNNER_OS" in
+                    Linux) platform="linux" ;;
+                    macOS) platform="darwin" ;;
+                    *) echo "Unsupported runner: $RUNNER_OS" >&2; exit 1 ;;
+                  esac
+                  case "$(uname -m)" in
+                    arm64|aarch64) arch="arm64" ;;
+                    x86_64|amd64) arch="x64" ;;
+                    *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
+                  esac
+                  archive="docia-v${GITHUB_REF_NAME}-${platform}-${arch}.tar.gz"
+                  binary="docia-v${GITHUB_REF_NAME}-${platform}-${arch}"
+                  tar -xzf "dist/$archive" -C dist
+                  test "$(dist/$binary --version)" = "$GITHUB_REF_NAME"
+
+    smoke-windows:
+        needs: build-assets
+        runs-on: windows-latest
+        steps:
+            - uses: actions/download-artifact@v4
+              with:
+                  name: release-assets
+                  path: dist
+            - name: Run packaged binary
+              shell: pwsh
+              run: |
+                  $archive = "dist/docia-v${env:GITHUB_REF_NAME}-windows-x64.zip"
+                  Expand-Archive -Path $archive -DestinationPath dist/unpacked
+                  $binary = "dist/unpacked/docia-v${env:GITHUB_REF_NAME}-windows-x64.exe"
+                  $actual = (& $binary --version).Trim()
+                  if ($actual -ne $env:GITHUB_REF_NAME) {
+                    throw "Expected $env:GITHUB_REF_NAME, received $actual"
+                  }
+
+    publish:
+        needs: [smoke-unix, smoke-windows]
         runs-on: ubuntu-latest
         environment: release
         permissions:
-            contents: read
+            contents: write
             id-token: write
         steps:
             - uses: actions/checkout@v5
             - name: Setup tools with mise
               uses: jdx/mise-action@v4
             - run: bun ci
-            - run: bun publish --provenance --access public
+            - uses: actions/download-artifact@v4
+              with:
+                  name: release-assets
+                  path: dist
+            - name: Publish npm package
+              run: bun publish --provenance --access public
               env:
                   NPM_CONFIG_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
-
-    build-binaries:
-        needs: publish-npm
-        runs-on: ubuntu-latest
-        permissions:
-            contents: write
-        steps:
-            - uses: actions/checkout@v5
-            - name: Setup tools with mise
-              uses: jdx/mise-action@v4
-            - run: bun ci
-            - name: Get version
-              id: get_version
-              run: |
-                  VERSION=${GITHUB_REF#refs/tags/}
-                  echo "version=$VERSION" >> $GITHUB_OUTPUT
-            - name: Build binaries
-              run: bun run scripts/build-binaries.ts
-            - name: Create archives
-              run: |
-                  cd dist
-
-                  # macOS x64
-                  tar -czf docia-v${{ steps.get_version.outputs.version }}-darwin-x64.tar.gz docia-v${{ steps.get_version.outputs.version }}-darwin-x64
-                  # macOS arm64
-                  tar -czf docia-v${{ steps.get_version.outputs.version }}-darwin-arm64.tar.gz docia-v${{ steps.get_version.outputs.version }}-darwin-arm64
-
-                  # Linux x64
-                  tar -czf docia-v${{ steps.get_version.outputs.version }}-linux-x64.tar.gz docia-v${{ steps.get_version.outputs.version }}-linux-x64
-                  # Linux arm64
-                  tar -czf docia-v${{ steps.get_version.outputs.version }}-linux-arm64.tar.gz docia-v${{ steps.get_version.outputs.version }}-linux-arm64
-
-                  # Windows x64
-                  zip docia-v${{ steps.get_version.outputs.version }}-windows-x64.zip docia-v${{ steps.get_version.outputs.version }}-windows-x64.exe
-                  # Windows arm64
-                  zip docia-v${{ steps.get_version.outputs.version }}-windows-arm64.zip docia-v${{ steps.get_version.outputs.version }}-windows-arm64.exe
-            - name: Upload binaries to release
+            - name: Publish GitHub release
               uses: softprops/action-gh-release@v2
               with:
+                  generate_release_notes: true
                   files: |
-                      dist/docia-v${{ steps.get_version.outputs.version }}-darwin-x64.tar.gz
-                      dist/docia-v${{ steps.get_version.outputs.version }}-darwin-arm64.tar.gz
-                      dist/docia-v${{ steps.get_version.outputs.version }}-linux-x64.tar.gz
-                      dist/docia-v${{ steps.get_version.outputs.version }}-linux-arm64.tar.gz
-                      dist/docia-v${{ steps.get_version.outputs.version }}-windows-x64.zip
-                      dist/docia-v${{ steps.get_version.outputs.version }}-windows-arm64.zip
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                      dist/*.tar.gz
+                      dist/*.zip
+                      dist/SHA256SUMS

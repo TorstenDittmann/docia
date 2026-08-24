@@ -47,6 +47,8 @@ This creates:
 - `docia.config.ts`
 - `book/SUMMARY.md`
 - starter chapters
+- `public/favicon.svg`
+- `.gitignore`
 
 ## 2) Run local dev
 
@@ -54,7 +56,8 @@ This creates:
 docia dev
 ```
 
-`dev` performs an initial build, serves static output, and rebuilds when source files change.
+`dev` performs an initial build, serves static output, and refreshes the browser when source,
+configuration, or public asset files change. Draft pages are available in development previews.
 
 ## 3) Build production output
 

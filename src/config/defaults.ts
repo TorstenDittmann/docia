@@ -1,4 +1,4 @@
-import type { GoodDocsConfig } from "./types";
+import type { DociaConfig } from "./types";
 
 export const DEFAULT_CONFIG_FILES = [
 	"docia.config.ts",
@@ -6,7 +6,7 @@ export const DEFAULT_CONFIG_FILES = [
 	"docia.config.mjs",
 ] as const;
 
-export const DEFAULT_CONFIG: GoodDocsConfig = {
+export const DEFAULT_CONFIG: DociaConfig = {
 	srcDir: "book",
 	outDir: "dist",
 	publicDir: "public",
@@ -18,10 +18,24 @@ export const DEFAULT_CONFIG: GoodDocsConfig = {
 		language: "en",
 		url: "",
 		socials: {},
-		ogImage: "/og.png",
+		ogImage: "",
 		githubEditBaseUrl: "",
 		githubEditBranch: "main",
 		githubEditPath: "",
+	},
+	theme: {
+		logo: "",
+		favicon: "/favicon.svg",
+		accentColor: "",
+		customCss: [],
+		colorMode: "system",
+	},
+	images: {
+		optimize: true,
+		jpegQuality: 82,
+		webpQuality: 82,
+		pngCompressionLevel: 9,
+		maxPixels: 64_000_000,
 	},
 	markdown: {
 		tables: true,
