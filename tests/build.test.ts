@@ -87,18 +87,13 @@ Link back to [Intro](README.md).
 		const searchIndexHref = /<meta name="docia-search-index" content="([^"]+)"\s*\/?>/.exec(
 			indexHtml,
 		)?.[1];
-		expect(searchIndexHref).toMatch(/^\/search-index-[a-f0-9]{8}\.json$/);
+		expect(searchIndexHref).toMatch(/^\/search-index-[a-z0-9]{8}\.json$/);
 		expect(indexHtml).toContain(
 			`<link rel="preload" href="${searchIndexHref}" as="fetch" crossorigin="anonymous"/>`,
 		);
 		const searchPath = resolve(fixture.rootDir, "dist", (searchIndexHref ?? "").slice(1));
 		expect(await Bun.file(searchPath).exists()).toBe(true);
 		const searchContents = await Bun.file(searchPath).text();
-		const searchFingerprint = new Bun.CryptoHasher("sha256")
-			.update(searchContents)
-			.digest("hex")
-			.slice(0, 8);
-		expect(searchIndexHref).toBe(`/search-index-${searchFingerprint}.json`);
 
 		const stylesheetMatch = /<link\s+rel="stylesheet"\s+href="([^"]+\.css)"\s*\/?>/.exec(
 			indexHtml,
@@ -132,10 +127,8 @@ Link back to [Intro](README.md).
 		expect(llmsTxt).toContain(`https://docs.example.com${searchIndexHref}`);
 
 		const searchPayload = JSON.parse(searchContents) as {
-			generatedAt: string;
 			pages: Array<{ routePath: string }>;
 		};
-		expect(Number.isNaN(Date.parse(searchPayload.generatedAt))).toBe(false);
 		expect(searchPayload.pages.length).toBe(2);
 		expect(searchPayload.pages.map((page) => page.routePath)).toContain("/");
 		expect(searchPayload.pages.map((page) => page.routePath)).toContain("/guide/");
@@ -148,5 +141,11 @@ Link back to [Intro](README.md).
 		expect(searchResponse.headers.get("cache-control")).toBe(
 			"public, max-age=31536000, immutable",
 		);
+
+		const rebuilt = await buildSite(loaded.config);
+		const rebuiltSearchIndex = rebuilt.outputFiles.find((outputFile) =>
+			/^search-index-[a-z0-9]{8}\.json$/.test(outputFile),
+		);
+		expect(rebuiltSearchIndex).toBe(searchIndexHref?.slice(1));
 	});
 });

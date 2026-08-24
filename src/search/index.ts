@@ -6,6 +6,8 @@ export interface SearchIndexArtifact {
 	fileName: string;
 }
 
+const SEARCH_INDEX_SOURCE_NAME = "search-index.json";
+
 function normalizeText(input: string): string {
 	return input.replace(/\s+/g, " ").trim();
 }
@@ -29,18 +31,35 @@ export function createSearchEntry(input: SearchIndexEntry): SearchIndexEntry {
 	};
 }
 
-export function createSearchIndexArtifact(entries: SearchIndexEntry[]): SearchIndexArtifact {
+export async function createSearchIndexArtifact(
+	entries: SearchIndexEntry[],
+): Promise<SearchIndexArtifact> {
 	const indexData = {
 		version: 1,
-		generatedAt: new Date().toISOString(),
 		pages: entries,
 	};
 	const contents = JSON.stringify(indexData);
-	const fingerprint = new Bun.CryptoHasher("sha256").update(contents).digest("hex").slice(0, 8);
+	const result = await Bun.build({
+		entrypoints: [SEARCH_INDEX_SOURCE_NAME],
+		naming: {
+			asset: "[name]-[hash].[ext]",
+		},
+		loader: {
+			".json": "file",
+		},
+		files: {
+			[SEARCH_INDEX_SOURCE_NAME]: contents,
+		},
+	});
+	const asset = result.outputs.find((output) => output.kind === "asset");
+
+	if (!result.success || !asset?.hash) {
+		throw new Error("Failed to fingerprint search index");
+	}
 
 	return {
 		contents,
-		fileName: `search-index-${fingerprint}.json`,
+		fileName: `search-index-${asset.hash}.json`,
 	};
 }
 
