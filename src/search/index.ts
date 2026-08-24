@@ -36,7 +36,7 @@ export function createSearchIndexArtifact(entries: SearchIndexEntry[]): SearchIn
 		pages: entries,
 	};
 	const contents = JSON.stringify(indexData);
-	const fingerprint = new Bun.CryptoHasher("sha256").update(contents).digest("hex").slice(0, 16);
+	const fingerprint = new Bun.CryptoHasher("sha256").update(contents).digest("hex").slice(0, 8);
 
 	return {
 		contents,

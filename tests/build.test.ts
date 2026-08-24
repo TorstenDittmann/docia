@@ -87,7 +87,7 @@ Link back to [Intro](README.md).
 		const searchIndexHref = /<meta name="docia-search-index" content="([^"]+)"\s*\/?>/.exec(
 			indexHtml,
 		)?.[1];
-		expect(searchIndexHref).toMatch(/^\/search-index-[a-f0-9]{16}\.json$/);
+		expect(searchIndexHref).toMatch(/^\/search-index-[a-f0-9]{8}\.json$/);
 		expect(indexHtml).toContain(
 			`<link rel="preload" href="${searchIndexHref}" as="fetch" crossorigin="anonymous"/>`,
 		);
@@ -97,7 +97,7 @@ Link back to [Intro](README.md).
 		const searchFingerprint = new Bun.CryptoHasher("sha256")
 			.update(searchContents)
 			.digest("hex")
-			.slice(0, 16);
+			.slice(0, 8);
 		expect(searchIndexHref).toBe(`/search-index-${searchFingerprint}.json`);
 
 		const stylesheetMatch = /<link\s+rel="stylesheet"\s+href="([^"]+\.css)"\s*\/?>/.exec(
