@@ -44,7 +44,7 @@ curl -fsSL https://docia.xyz/install.sh | sh
 
 ### Option 2: npm (with Bun runtime)
 
-**Requirements:** Bun 1.3+
+**Requirements:** Bun 1.4+
 
 ```bash
 # Install globally
@@ -79,6 +79,7 @@ Or run the docs locally:
 ```bash
 git clone https://github.com/yourusername/docia
 cd docia
+mise install
 bun install
 bun run src/cli.ts dev --config docs/docia.config.ts
 ```

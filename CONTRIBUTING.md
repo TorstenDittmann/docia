@@ -4,10 +4,15 @@ Thank you for your interest in contributing to docia!
 
 ## Development Setup
 
+Install Bun 1.4 or newer, then:
+
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/docia
 cd docia
+
+# Install the pinned Bun version from mise.toml
+mise install
 
 # Install dependencies
 bun install
@@ -26,7 +31,7 @@ bun run src/cli.ts dev --config docs/docia.config.ts
 ## Testing
 
 ```bash
-bun test
+bun run test
 ```
 
 ## Linting and Formatting
@@ -66,8 +71,8 @@ Foundation features implemented:
 
 1. Create a new branch for your feature or fix
 2. Make your changes with clear commit messages
-3. Ensure tests pass: `bun test`
-4. Run linting: `bun run lint`
+3. Run all checks: `bun run verify`
+4. Run formatting fixes if needed: `bun run fmt`
 5. Submit a pull request with a description of your changes
 
 ## Reporting Issues
