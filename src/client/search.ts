@@ -221,7 +221,7 @@ function mountCommandMenu(basePath: string, searchIndexHref: string): () => void
 			const searchInstance = createMiniSearch();
 
 			try {
-				const response = await fetch(searchIndexHref, { cache: "no-store" });
+				const response = await fetch(searchIndexHref);
 				if (!response.ok) {
 					miniSearch = searchInstance;
 					return miniSearch;
@@ -679,14 +679,15 @@ function mountMobileNav(): () => void {
 
 export function initSearch(): () => void {
 	const basePath = readMetaContent("docia-base-path") ?? "/";
-	const searchIndexHref =
-		readMetaContent("docia-search-index") ?? toBasePathHref(basePath, "/search-index.json");
+	const searchIndexHref = readMetaContent("docia-search-index");
 	const markdownHref =
 		readMetaContent("docia-markdown-url") ??
 		toBasePathHref(basePath, `${window.location.pathname}.md`);
 	const llmsHref = readMetaContent("docia-llms-url") ?? toBasePathHref(basePath, "/llms.txt");
 
-	const cleanupCommandMenu = mountCommandMenu(basePath, searchIndexHref);
+	const cleanupCommandMenu = searchIndexHref
+		? mountCommandMenu(basePath, searchIndexHref)
+		: () => {};
 	const cleanupPageAiMenu = mountPageAiMenu(markdownHref, llmsHref);
 	const cleanupMobileNav = mountMobileNav();
 

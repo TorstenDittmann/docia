@@ -17,7 +17,7 @@ Upload `dist/` to your hosting provider.
 - `robots.txt`
 - `sitemap.xml`
 - `llms.txt`
-- `search-index.json`
+- `search-index-[hash].json`
 
 ## Base path deployments
 

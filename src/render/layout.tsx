@@ -18,6 +18,7 @@ export interface RenderPageLayoutInput {
 	headings: MarkdownHeading[];
 	pageDescription: string;
 	assets: RenderAssetManifest;
+	searchIndexFileName: string;
 }
 
 const DOCIA_GITHUB_URL = "https://github.com/torstendittmann/docia";
@@ -424,6 +425,7 @@ function Head(props: {
 	chapter: SummaryChapterEntry;
 	pageDescription: string;
 	assets: RenderAssetManifest;
+	searchIndexFileName: string;
 }): JSX.Element {
 	const siteTitle = props.config.site.title;
 	const pageTitle = `${props.chapter.title} - ${siteTitle}`;
@@ -432,7 +434,10 @@ function Head(props: {
 	const ogImageHref = toBasePathHref(props.config.basePath, props.config.site.ogImage);
 	const ogImageUrl = resolveAbsoluteUrl(props.config, ogImageHref) ?? ogImageHref;
 
-	const searchIndexHref = toBasePathHref(props.config.basePath, "/search-index.json");
+	const searchIndexHref = toBasePathHref(
+		props.config.basePath,
+		`/${encodePathForHref(props.searchIndexFileName)}`,
+	);
 	const llmsHref = toBasePathHref(props.config.basePath, "/llms.txt");
 	const markdownHref = toBasePathHref(
 		props.config.basePath,
@@ -528,7 +533,16 @@ function CommandOverlay(): JSX.Element {
 }
 
 function PageDocument(props: RenderPageLayoutInput): JSX.Element {
-	const { config, graph, chapter, contentHtml, headings, pageDescription, assets } = props;
+	const {
+		config,
+		graph,
+		chapter,
+		contentHtml,
+		headings,
+		pageDescription,
+		assets,
+		searchIndexFileName,
+	} = props;
 
 	const markdownHref = toBasePathHref(
 		config.basePath,
@@ -546,6 +560,7 @@ function PageDocument(props: RenderPageLayoutInput): JSX.Element {
 				chapter={chapter}
 				pageDescription={pageDescription}
 				assets={assets}
+				searchIndexFileName={searchIndexFileName}
 			/>
 			<body>
 				<div className={appClassName}>

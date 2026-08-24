@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
 import { buildSite } from "../src/build";
 import { loadConfig } from "../src/config/load-config";
+import { serveStaticRequest } from "../src/server/static";
 import { createTestProjectFixture } from "./helpers/project-fixture";
 
 const cleanupTasks: Array<() => Promise<void>> = [];
@@ -67,7 +68,6 @@ Link back to [Intro](README.md).
 		const robotsPath = resolve(fixture.rootDir, "dist/robots.txt");
 		const sitemapPath = resolve(fixture.rootDir, "dist/sitemap.xml");
 		const llmsPath = resolve(fixture.rootDir, "dist/llms.txt");
-		const searchPath = resolve(fixture.rootDir, "dist/search-index.json");
 		const assetPath = resolve(fixture.rootDir, "dist/asset.txt");
 		const indexMarkdownPath = resolve(fixture.rootDir, "dist/index.html.md");
 		const guideMarkdownPath = resolve(fixture.rootDir, "dist/guide/index.html.md");
@@ -77,7 +77,6 @@ Link back to [Intro](README.md).
 		expect(await Bun.file(robotsPath).exists()).toBe(true);
 		expect(await Bun.file(sitemapPath).exists()).toBe(true);
 		expect(await Bun.file(llmsPath).exists()).toBe(true);
-		expect(await Bun.file(searchPath).exists()).toBe(true);
 		expect(await Bun.file(assetPath).exists()).toBe(true);
 		expect(await Bun.file(indexMarkdownPath).exists()).toBe(true);
 		expect(await Bun.file(guideMarkdownPath).exists()).toBe(true);
@@ -85,6 +84,18 @@ Link back to [Intro](README.md).
 		const indexHtml = await Bun.file(indexPath).text();
 		expect(indexHtml).toContain('<link rel="canonical"');
 		expect(indexHtml).toContain('id="gd-command-input"');
+		const searchIndexHref = /<meta name="docia-search-index" content="([^"]+)"\s*\/?>/.exec(
+			indexHtml,
+		)?.[1];
+		expect(searchIndexHref).toMatch(/^\/search-index-[a-z0-9]{13}\.json$/);
+		expect(indexHtml).toContain(
+			`<link rel="preload" href="${searchIndexHref}" as="fetch" crossorigin="anonymous"/>`,
+		);
+		const searchPath = resolve(fixture.rootDir, "dist", (searchIndexHref ?? "").slice(1));
+		expect(await Bun.file(searchPath).exists()).toBe(true);
+		const searchContents = await Bun.file(searchPath).text();
+		const searchFingerprint = Bun.hash(searchContents).toString(36).padStart(13, "0");
+		expect(searchIndexHref).toBe(`/search-index-${searchFingerprint}.json`);
 
 		const stylesheetMatch = /<link\s+rel="stylesheet"\s+href="([^"]+\.css)"\s*\/?>/.exec(
 			indexHtml,
@@ -115,12 +126,28 @@ Link back to [Intro](README.md).
 		expect(llmsTxt).toContain("## Docs");
 		expect(llmsTxt).toContain("https://docs.example.com/index.html.md");
 		expect(llmsTxt).toContain("https://docs.example.com/guide/index.html.md");
+		expect(llmsTxt).toContain(`https://docs.example.com${searchIndexHref}`);
 
-		const searchPayload = (await Bun.file(searchPath).json()) as {
+		const searchPayload = JSON.parse(searchContents) as {
 			pages: Array<{ routePath: string }>;
 		};
 		expect(searchPayload.pages.length).toBe(2);
 		expect(searchPayload.pages.map((page) => page.routePath)).toContain("/");
 		expect(searchPayload.pages.map((page) => page.routePath)).toContain("/guide/");
+
+		const searchResponse = await serveStaticRequest({
+			config: loaded.config,
+			request: new Request(`http://localhost${searchIndexHref}`),
+			noCache: true,
+		});
+		expect(searchResponse.headers.get("cache-control")).toBe(
+			"public, max-age=31536000, immutable",
+		);
+
+		const rebuilt = await buildSite(loaded.config);
+		const rebuiltSearchIndex = rebuilt.outputFiles.find((outputFile) =>
+			/^search-index-[a-z0-9]{13}\.json$/.test(outputFile),
+		);
+		expect(rebuiltSearchIndex).toBe(searchIndexHref?.slice(1));
 	});
 });
