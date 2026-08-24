@@ -23,8 +23,7 @@
 	},
 	"files": [
 		"src",
-		"README.md",
-		"CHANGELOG.md"
+		"README.md"
 	],
 	"type": "module",
 	"module": "./src/index.ts",
