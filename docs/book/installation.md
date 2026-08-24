@@ -44,15 +44,15 @@ curl -L https://github.com/docia/docia/releases/latest/download/docia-v$(curl -s
 sudo mv docia-v* /usr/local/bin/docia
 ```
 
-### Windows
+### Windows (x64 and ARM64)
 
-Windows users should download the `.exe` from [GitHub Releases](https://github.com/docia/docia/releases/latest) and add it to their PATH manually.
+Windows users should download the `.exe` for their architecture from [GitHub Releases](https://github.com/docia/docia/releases/latest) and add it to their PATH manually.
 
 ## Option 2: npm (requires Bun)
 
 If you prefer to use npm/Bun:
 
-**Prerequisites:** Bun 1.3+
+**Prerequisites:** Bun 1.4+
 
 ```bash
 # Install globally

@@ -12,11 +12,9 @@ jobs:
             id-token: write
         steps:
             - uses: actions/checkout@v5
-            - name: Setup Bun
-              uses: oven-sh/setup-bun@v1
-              with:
-                  bun-version: latest
-            - run: bun install --frozen-lockfile
+            - name: Setup tools with mise
+              uses: jdx/mise-action@v4
+            - run: bun ci
             - run: bun publish --provenance --access public
               env:
                   NPM_CONFIG_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
@@ -28,11 +26,9 @@ jobs:
             contents: write
         steps:
             - uses: actions/checkout@v5
-            - name: Setup Bun
-              uses: oven-sh/setup-bun@v1
-              with:
-                  bun-version: latest
-            - run: bun install --frozen-lockfile
+            - name: Setup tools with mise
+              uses: jdx/mise-action@v4
+            - run: bun ci
             - name: Get version
               id: get_version
               run: |
@@ -56,6 +52,8 @@ jobs:
 
                   # Windows x64
                   zip docia-v${{ steps.get_version.outputs.version }}-windows-x64.zip docia-v${{ steps.get_version.outputs.version }}-windows-x64.exe
+                  # Windows arm64
+                  zip docia-v${{ steps.get_version.outputs.version }}-windows-arm64.zip docia-v${{ steps.get_version.outputs.version }}-windows-arm64.exe
             - name: Upload binaries to release
               uses: softprops/action-gh-release@v2
               with:
@@ -65,5 +63,6 @@ jobs:
                       dist/docia-v${{ steps.get_version.outputs.version }}-linux-x64.tar.gz
                       dist/docia-v${{ steps.get_version.outputs.version }}-linux-arm64.tar.gz
                       dist/docia-v${{ steps.get_version.outputs.version }}-windows-x64.zip
+                      dist/docia-v${{ steps.get_version.outputs.version }}-windows-arm64.zip
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -16,6 +16,7 @@ async function getVersion(): Promise<string> {
 async function buildBinaries() {
 	const version = await getVersion();
 	const distDir = join(process.cwd(), "dist");
+	const hostPlatform = process.platform === "win32" ? "windows" : process.platform;
 
 	if (!existsSync(distDir)) {
 		mkdirSync(distDir, { recursive: true });
@@ -29,6 +30,7 @@ async function buildBinaries() {
 		{ platform: "linux", arch: "x64", ext: "" },
 		{ platform: "linux", arch: "arm64", ext: "" },
 		{ platform: "windows", arch: "x64", ext: ".exe" },
+		{ platform: "windows", arch: "arm64", ext: ".exe" },
 	];
 
 	for (const target of targets) {
@@ -39,7 +41,17 @@ async function buildBinaries() {
 		console.log(`Building ${targetName} -> ${outputName}`);
 
 		try {
-			await $`bun build --compile --minify --sourcemap --target=${targetName} ./src/cli.ts --outfile ${outputPath}`;
+			await $`bun build --compile --minify --sourcemap --asset ./package.json --target=${targetName} ./src/cli.ts --outfile ${outputPath}`;
+
+			if (target.platform === hostPlatform && target.arch === process.arch) {
+				const builtVersion = (await $`${outputPath} --version`.text()).trim();
+				if (builtVersion !== version) {
+					throw new Error(
+						`Version smoke test failed: expected ${version}, received ${builtVersion}`,
+					);
+				}
+			}
+
 			console.log(`  ✓ Built ${outputName}\n`);
 		} catch (error) {
 			console.error(`  ✗ Failed to build ${outputName}:`, error);

@@ -26,12 +26,14 @@
 		"dev": "bun run src/cli.ts dev --config docs/docia.config.ts",
 		"serve": "bun run src/cli.ts serve --config docs/docia.config.ts",
 		"check": "bun run src/cli.ts check --config docs/docia.config.ts",
-		"test": "bun test",
+		"test": "bun test --parallel",
 		"lint": "oxlint",
 		"lint:fix": "oxlint --fix",
 		"fmt": "oxfmt",
 		"fmt:check": "oxfmt --check",
-		"build:binary": "bun build --compile ./src/cli.ts --outfile docia",
+		"deps:check": "bun dedupe --check",
+		"verify": "bun run --parallel lint fmt:check test deps:check",
+		"build:binary": "bun build --compile --asset ./package.json ./src/cli.ts --outfile docia",
 		"build:binaries": "bun run scripts/build-binaries.ts"
 	},
 	"dependencies": {
@@ -42,7 +44,7 @@
 		"shiki": "^3.22.0"
 	},
 	"devDependencies": {
-		"@types/bun": "latest",
+		"@types/bun": "^1.4.0",
 		"@types/react": "^19.2.13",
 		"@types/react-dom": "^19.2.3",
 		"oxfmt": "^0.28.0",
@@ -50,5 +52,9 @@
 	},
 	"peerDependencies": {
 		"typescript": "^5"
-	}
+	},
+	"engines": {
+		"bun": ">=1.4.0"
+	},
+	"packageManager": "bun@1.4.0"
 }

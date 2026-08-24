@@ -8,16 +8,27 @@ import { parseCliInput, readBooleanFlag } from "./utils/args";
 const CLI_NAME = "docia";
 
 async function getVersion(): Promise<string> {
-	const packageJsonFile = Bun.file(new URL("../package.json", import.meta.url));
-	if (!(await packageJsonFile.exists())) {
-		return "0.0.0";
+	const packageJsonUrls = [
+		new URL("../package.json", import.meta.url),
+		new URL("./package.json", import.meta.url),
+	];
+
+	for (const packageJsonUrl of packageJsonUrls) {
+		const packageJsonFile = Bun.file(packageJsonUrl);
+		if (!(await packageJsonFile.exists())) {
+			continue;
+		}
+
+		const packageJson = (await packageJsonFile.json()) as {
+			version?: unknown;
+		};
+
+		if (typeof packageJson.version === "string") {
+			return packageJson.version;
+		}
 	}
 
-	const packageJson = (await packageJsonFile.json()) as {
-		version?: unknown;
-	};
-
-	return typeof packageJson.version === "string" ? packageJson.version : "0.0.0";
+	return "0.0.0";
 }
 
 function printGeneralHelp(commands: readonly CommandDefinition[]): void {
