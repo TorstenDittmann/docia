@@ -1,6 +1,7 @@
 import type { ResolvedConfig } from "../config/types";
 import { CliError } from "../errors";
 import { toBasePathHref } from "../utils/html";
+import { relative, sep } from "node:path";
 
 // @ts-expect-error Bun's text import attribute
 import mainTs from "../client/main.ts" with { type: "text" };
@@ -71,14 +72,13 @@ export async function buildClientAssets(
 
 	for (const artifact of result.outputs) {
 		outputFiles.push(artifact.path);
+		const relativePath = relative(config.outDirAbsolute, artifact.path).split(sep).join("/");
 
 		if (artifact.kind === "entry-point" && artifact.path.endsWith(".js")) {
-			const relativePath = artifact.path.replace(config.outDirAbsolute, "");
 			scriptHref = toBasePathHref(config.basePath, relativePath);
 		}
 
 		if (artifact.path.endsWith(".css") && stylesheetHref === null) {
-			const relativePath = artifact.path.replace(config.outDirAbsolute, "");
 			stylesheetHref = toBasePathHref(config.basePath, relativePath);
 		}
 	}
