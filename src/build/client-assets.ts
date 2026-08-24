@@ -1,21 +1,31 @@
 import type { ResolvedConfig } from "../config/types";
 import { CliError } from "../errors";
 import { toBasePathHref } from "../utils/html";
+import { relative, sep } from "node:path";
 
 // @ts-expect-error Bun's text import attribute
 import mainTs from "../client/main.ts" with { type: "text" };
+// @ts-expect-error Bun's text import attribute
+import contentTs from "../client/content.ts" with { type: "text" };
+// @ts-expect-error Bun's text import attribute
+import liveReloadTs from "../client/live-reload.ts" with { type: "text" };
 // @ts-expect-error Bun's text import attribute
 import routerTs from "../client/router.ts" with { type: "text" };
 // @ts-expect-error Bun's text import attribute
 import searchTs from "../client/search.ts" with { type: "text" };
 // @ts-expect-error Bun's text import attribute
 import stylesCss from "../client/styles.css" with { type: "text" };
+// @ts-expect-error Bun's text import attribute
+import themeTs from "../client/theme.ts" with { type: "text" };
 
 const CLIENT_FILES = {
 	"main.ts": mainTs,
+	"./content.ts": contentTs,
+	"./live-reload.ts": liveReloadTs,
 	"./router.ts": routerTs,
 	"./search.ts": searchTs,
 	"./styles.css": stylesCss,
+	"./theme.ts": themeTs,
 };
 
 export interface ClientAssetManifest {
@@ -62,14 +72,13 @@ export async function buildClientAssets(
 
 	for (const artifact of result.outputs) {
 		outputFiles.push(artifact.path);
+		const relativePath = relative(config.outDirAbsolute, artifact.path).split(sep).join("/");
 
 		if (artifact.kind === "entry-point" && artifact.path.endsWith(".js")) {
-			const relativePath = artifact.path.replace(config.outDirAbsolute, "");
 			scriptHref = toBasePathHref(config.basePath, relativePath);
 		}
 
 		if (artifact.path.endsWith(".css") && stylesheetHref === null) {
-			const relativePath = artifact.path.replace(config.outDirAbsolute, "");
 			stylesheetHref = toBasePathHref(config.basePath, relativePath);
 		}
 	}

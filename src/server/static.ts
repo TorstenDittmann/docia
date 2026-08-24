@@ -28,7 +28,18 @@ function normalizeBasePath(basePath: string): string {
 	return withSlash.endsWith("/") ? withSlash.slice(0, -1) : withSlash;
 }
 
-function createNotFoundResponse(pathname: string): Response {
+async function createNotFoundResponse(pathname: string, outDirAbsolute: string): Promise<Response> {
+	const generatedNotFound = Bun.file(resolve(outDirAbsolute, "404.html"));
+	if (await generatedNotFound.exists()) {
+		return new Response(generatedNotFound, {
+			status: 404,
+			headers: {
+				"content-type": "text/html; charset=utf-8",
+				"cache-control": "no-store",
+			},
+		});
+	}
+
 	const escapedPath = escapeHtml(pathname);
 	const html = `<!doctype html>
 <html lang="en">
@@ -177,7 +188,7 @@ export async function serveStaticRequest(options: ServeStaticRequestOptions): Pr
 	});
 
 	if (!resolved) {
-		return createNotFoundResponse(url.pathname);
+		return createNotFoundResponse(url.pathname, options.config.outDirAbsolute);
 	}
 
 	const response = new Response(Bun.file(resolved.absolutePath));

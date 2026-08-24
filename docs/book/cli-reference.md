@@ -5,7 +5,7 @@
 Create a new project scaffold.
 
 ```bash
-docia init [directory] [--title <name>] [--force]
+docia init [directory] [--title <name>] [--description <text>] [--lang <code>] [--force]
 ```
 
 ## `build`

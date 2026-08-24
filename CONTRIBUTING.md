@@ -8,7 +8,7 @@ Install Bun 1.4 or newer, then:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/docia
+git clone https://github.com/TorstenDittmann/docia
 cd docia
 
 # Install the pinned Bun version from mise.toml
@@ -32,6 +32,7 @@ bun run src/cli.ts dev --config docs/docia.config.ts
 
 ```bash
 bun run test
+bun run typecheck
 ```
 
 ## Linting and Formatting
@@ -66,6 +67,9 @@ Foundation features implemented:
 - Sidebar socials and optional GitHub edit links
 - `dev` and `serve` on `Bun.serve()`
 - `check` validations for missing files, duplicate routes/output paths, broken markdown links, and orphan markdown files
+- Page front matter, stable slugs, static redirects, draft previews, and generated 404 output
+- Configurable branding, persistent color modes, code-copy controls, and heading permalinks
+- Browser live reload for Markdown, configuration, and public assets
 
 ## Submitting Changes
 

@@ -19,6 +19,22 @@ function formatDuration(ms: number): string {
 	return `${(ms / 1000).toFixed(2)}s`;
 }
 
+function formatBytes(bytes: number): string {
+	if (bytes < 1024) {
+		return `${bytes} B`;
+	}
+
+	const units = ["KiB", "MiB", "GiB"];
+	let value = bytes / 1024;
+	let unitIndex = 0;
+	while (value >= 1024 && unitIndex < units.length - 1) {
+		value /= 1024;
+		unitIndex += 1;
+	}
+
+	return `${value.toFixed(value >= 10 ? 1 : 2)} ${units[unitIndex]}`;
+}
+
 function padLabel(label: string): string {
 	return `${label}:`.padEnd(17, " ");
 }
@@ -39,6 +55,8 @@ function progressLabel(phase: BuildProgressEvent["phase"]): string {
 	switch (phase) {
 		case "clean":
 			return "Cleaning output";
+		case "images":
+			return "Optimizing public images";
 		case "assets":
 			return "Bundling client assets";
 		case "pages":
@@ -160,8 +178,23 @@ export async function runBuildCommand(context: CommandContext): Promise<number> 
 	console.log(section("Output"));
 	console.log(`  ${key("Pages")}${pc.green(String(result.pageCount))}`);
 	console.log(`  ${key("Markdown mirrors")}${pc.green(String(result.markdownMirrorCount))}`);
+	console.log(`  ${key("Redirects")}${pc.green(String(result.redirectCount))}`);
 	console.log(`  ${key("Search docs")}${pc.green(String(result.searchDocumentCount))}`);
 	console.log(`  ${key("Client assets")}${pc.green(String(result.clientAssetCount))}`);
+	console.log(
+		`  ${key("Images")}${
+			result.imageOptimization.enabled
+				? pc.green(
+						`${result.imageOptimization.optimizedCount}/${result.imageOptimization.discoveredCount} optimized`,
+					)
+				: pc.dim("disabled")
+		}`,
+	);
+	if (result.imageOptimization.bytesSaved > 0) {
+		console.log(
+			`  ${key("Image savings")}${pc.green(formatBytes(result.imageOptimization.bytesSaved))}`,
+		);
+	}
 	console.log(`  ${key("Emitted files")}${pc.green(String(result.outputFiles.length))}`);
 	console.log(
 		`  ${key("Public assets")}${
@@ -178,6 +211,7 @@ export async function runBuildCommand(context: CommandContext): Promise<number> 
 	console.log("");
 	console.log(section("Timing"));
 	console.log(`  ${key("Clean")}${pc.yellow(formatDuration(result.timing.cleanMs))}`);
+	console.log(`  ${key("Images")}${pc.yellow(formatDuration(result.timing.imagesMs))}`);
 	console.log(`  ${key("Client bundle")}${pc.yellow(formatDuration(result.timing.assetsMs))}`);
 	console.log(`  ${key("Page render")}${pc.yellow(formatDuration(result.timing.pagesMs))}`);
 	console.log(

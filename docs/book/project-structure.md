@@ -10,7 +10,7 @@ Default layout:
 │   ├── README.md
 │   └── ...chapters...
 ├── public/
-│   └── ...static assets copied as-is...
+│   └── ...static assets...
 └── dist/
     └── ...generated output...
 ```
@@ -19,7 +19,7 @@ Default layout:
 
 - `book/SUMMARY.md`: chapter order + sidebar hierarchy
 - `book/**/*.md`: chapter source files
-- `public/`: images/fonts/files copied to output
+- `public/`: assets copied to output; JPEG, PNG, and WebP images are optimized by default
 - `dist/`: generated site (gitignored in most repos)
 
 ## Chapter routing

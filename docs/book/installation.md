@@ -14,39 +14,39 @@ This script automatically detects your platform and architecture, downloads the 
 
 ### Manual installation
 
-If you prefer to install manually, download the appropriate binary from [GitHub Releases](https://github.com/docia/docia/releases/latest):
+If you prefer to install manually, download the appropriate binary from [GitHub Releases](https://github.com/TorstenDittmann/docia/releases/latest):
 
 **macOS (Apple Silicon)**
 
 ```bash
-curl -L https://github.com/docia/docia/releases/latest/download/docia-v$(curl -s https://api.github.com/repos/docia/docia/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')-darwin-arm64.tar.gz | tar xz
+curl -L https://github.com/TorstenDittmann/docia/releases/latest/download/docia-v$(curl -s https://api.github.com/repos/TorstenDittmann/docia/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')-darwin-arm64.tar.gz | tar xz
 sudo mv docia-v* /usr/local/bin/docia
 ```
 
 **macOS (Intel)**
 
 ```bash
-curl -L https://github.com/docia/docia/releases/latest/download/docia-v$(curl -s https://api.github.com/repos/docia/docia/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')-darwin-x64.tar.gz | tar xz
+curl -L https://github.com/TorstenDittmann/docia/releases/latest/download/docia-v$(curl -s https://api.github.com/repos/TorstenDittmann/docia/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')-darwin-x64.tar.gz | tar xz
 sudo mv docia-v* /usr/local/bin/docia
 ```
 
 **Linux (x64)**
 
 ```bash
-curl -L https://github.com/docia/docia/releases/latest/download/docia-v$(curl -s https://api.github.com/repos/docia/docia/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')-linux-x64.tar.gz | tar xz
+curl -L https://github.com/TorstenDittmann/docia/releases/latest/download/docia-v$(curl -s https://api.github.com/repos/TorstenDittmann/docia/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')-linux-x64.tar.gz | tar xz
 sudo mv docia-v* /usr/local/bin/docia
 ```
 
 **Linux (ARM64)**
 
 ```bash
-curl -L https://github.com/docia/docia/releases/latest/download/docia-v$(curl -s https://api.github.com/repos/docia/docia/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')-linux-arm64.tar.gz | tar xz
+curl -L https://github.com/TorstenDittmann/docia/releases/latest/download/docia-v$(curl -s https://api.github.com/repos/TorstenDittmann/docia/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')-linux-arm64.tar.gz | tar xz
 sudo mv docia-v* /usr/local/bin/docia
 ```
 
 ### Windows (x64 and ARM64)
 
-Windows users should download the `.exe` for their architecture from [GitHub Releases](https://github.com/docia/docia/releases/latest) and add it to their PATH manually.
+Windows users should download the `.exe` for their architecture from [GitHub Releases](https://github.com/TorstenDittmann/docia/releases/latest) and add it to their PATH manually.
 
 ## Option 2: npm (requires Bun)
 

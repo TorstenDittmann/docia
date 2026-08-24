@@ -6,6 +6,7 @@ import { loadConfig } from "../config/load-config";
 import type { ResolvedConfig } from "../config/types";
 import { CliError } from "../errors";
 import { serveStaticRequest } from "../server/static";
+import { toBasePathHref } from "../utils/html";
 import { waitForTermination } from "../utils/process";
 
 interface DevServerOptions {
@@ -70,6 +71,8 @@ export async function startDevServer(options: DevServerOptions): Promise<void> {
 	const initialBuild = await buildSite(activeConfig, {
 		minifyAssets: false,
 		sourcemapAssets: "linked",
+		includeDrafts: true,
+		liveReload: true,
 	});
 
 	const watchers: FSWatcher[] = [];
@@ -78,16 +81,66 @@ export async function startDevServer(options: DevServerOptions): Promise<void> {
 	let pendingReason: string | null = null;
 	let rebuildTimer: ReturnType<typeof setTimeout> | null = null;
 
+	const liveReloadClients = new Set<ReadableStreamDefaultController<Uint8Array>>();
+	const encoder = new TextEncoder();
+	const broadcastReload = (): void => {
+		const message = encoder.encode(`event: reload\ndata: ${Date.now()}\n\n`);
+		for (const client of liveReloadClients) {
+			try {
+				client.enqueue(message);
+			} catch {
+				liveReloadClients.delete(client);
+			}
+		}
+	};
+
 	const server = Bun.serve({
 		port: options.port,
 		hostname: options.host,
-		fetch: async (request) =>
-			serveStaticRequest({
+		fetch: async (request) => {
+			const url = new URL(request.url);
+			const eventPath = toBasePathHref(activeConfig.basePath, "/__docia/events");
+			if (url.pathname === eventPath) {
+				let controller: ReadableStreamDefaultController<Uint8Array> | null = null;
+				const stream = new ReadableStream<Uint8Array>({
+					start(nextController) {
+						controller = nextController;
+						liveReloadClients.add(nextController);
+						nextController.enqueue(encoder.encode("retry: 1000\n\n"));
+					},
+					cancel() {
+						if (controller) {
+							liveReloadClients.delete(controller);
+						}
+					},
+				});
+
+				return new Response(stream, {
+					headers: {
+						"cache-control": "no-cache, no-transform",
+						connection: "keep-alive",
+						"content-type": "text/event-stream",
+					},
+				});
+			}
+
+			return serveStaticRequest({
 				config: activeConfig,
 				request,
 				noCache: true,
-			}),
+			});
+		},
 	});
+	const heartbeatTimer = setInterval(() => {
+		const heartbeat = encoder.encode(`: ping ${Date.now()}\n\n`);
+		for (const client of liveReloadClients) {
+			try {
+				client.enqueue(heartbeat);
+			} catch {
+				liveReloadClients.delete(client);
+			}
+		}
+	}, 15_000);
 
 	const clearWatchers = (): void => {
 		for (const watcher of watchers) {
@@ -96,7 +149,11 @@ export async function startDevServer(options: DevServerOptions): Promise<void> {
 		watchers.length = 0;
 	};
 
-	const watchPath = async (pathValue: string, recursive: boolean): Promise<void> => {
+	const watchPath = async (
+		pathValue: string,
+		recursive: boolean,
+		ignoreWhileBuilding = false,
+	): Promise<void> => {
 		const kind = await getPathKind(pathValue);
 		if (kind === null) {
 			return;
@@ -107,6 +164,10 @@ export async function startDevServer(options: DevServerOptions): Promise<void> {
 		}
 
 		const watcher = watch(pathValue, { recursive }, (eventType, filename) => {
+			if (ignoreWhileBuilding && isBuilding) {
+				return;
+			}
+
 			const fileLabel = typeof filename === "string" ? filename : "unknown";
 			queueRebuild(`${eventType}:${fileLabel}`);
 		});
@@ -122,8 +183,7 @@ export async function startDevServer(options: DevServerOptions): Promise<void> {
 		clearWatchers();
 
 		await watchPath(config.srcDirAbsolute, true);
-		// Note: publicDir is NOT watched because cp() reads files which updates
-		// access times and triggers watcher events, causing infinite rebuild loops.
+		await watchPath(config.publicDirAbsolute, true, true);
 
 		if (config.configFilePath) {
 			await watchPath(config.configFilePath, false);
@@ -149,8 +209,11 @@ export async function startDevServer(options: DevServerOptions): Promise<void> {
 			const result = await buildSite(activeConfig, {
 				minifyAssets: false,
 				sourcemapAssets: "linked",
+				includeDrafts: true,
+				liveReload: true,
 			});
 			await refreshWatchers(activeConfig);
+			broadcastReload();
 
 			const changedFrom = reason.trim().length > 0 ? reason : "file change";
 			log(
@@ -202,6 +265,13 @@ export async function startDevServer(options: DevServerOptions): Promise<void> {
 		}
 
 		clearWatchers();
+		clearInterval(heartbeatTimer);
+		for (const client of liveReloadClients) {
+			try {
+				client.close();
+			} catch {}
+		}
+		liveReloadClients.clear();
 		server.stop(true);
 	});
 }

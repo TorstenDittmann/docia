@@ -10,6 +10,9 @@ Generate beautiful, fast, SEO-ready documentation sites from Markdown.
 - **SEO-first** — Sitemap, structured data, canonical URLs, robots.txt out of the box
 - **Clean navigation** — Simple chapter structure via `SUMMARY.md`
 - **LLM-ready** — `llms.txt` + per-page markdown for AI assistants
+- **Stable URLs** — Page slugs, redirects, and a static 404 page
+- **Brandable** — Logo, favicon, accent color, custom CSS, and persistent color modes
+- **Optimized images** — Native build-time JPEG, PNG, and WebP optimization with Bun.Image
 - **Static export** — Host anywhere (Vercel, Netlify, GitHub Pages, S3)
 
 ## Quick Start
@@ -39,7 +42,7 @@ No dependencies required. Works on macOS, Linux, and Windows.
 curl -fsSL https://docia.xyz/install.sh | sh
 
 # Windows users: download manually from GitHub Releases
-# https://github.com/docia/docia/releases/latest
+# https://github.com/TorstenDittmann/docia/releases/latest
 ```
 
 ### Option 2: npm (with Bun runtime)
@@ -77,7 +80,7 @@ Full documentation: [docia.xyz](https://docia.xyz) (built with docia)
 Or run the docs locally:
 
 ```bash
-git clone https://github.com/yourusername/docia
+git clone https://github.com/TorstenDittmann/docia
 cd docia
 mise install
 bun install
@@ -91,3 +94,7 @@ See `examples/team-handbook/` for a complete documentation site example.
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup and contribution guidelines.
+
+## License
+
+MIT © Torsten Dittmann

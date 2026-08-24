@@ -27,6 +27,7 @@ export interface SummaryChapterEntry extends SummaryBaseEntry {
 	sourceAbsolutePath: string;
 	routePath: string;
 	outputPath: string;
+	frontmatter: PageFrontmatter;
 	order: number;
 	previousChapterId: string | null;
 	nextChapterId: string | null;
@@ -43,3 +44,4 @@ export interface SummaryGraph {
 	firstChapterId: string | null;
 	lastChapterId: string | null;
 }
+import type { PageFrontmatter } from "../markdown/frontmatter";

@@ -1,7 +1,7 @@
-import type { JSX } from "react";
+import type { CSSProperties, JSX } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { SummaryChapterEntry, SummaryEntry, SummaryGraph, SummaryLinkEntry } from "../book";
-import type { ResolvedConfig } from "../config/types";
+import type { ResolvedConfig, ThemeColorMode } from "../config/types";
 import type { MarkdownHeading } from "../markdown";
 import { encodePathForHref, toBasePathHref } from "../utils/html";
 
@@ -19,9 +19,20 @@ export interface RenderPageLayoutInput {
 	pageDescription: string;
 	assets: RenderAssetManifest;
 	searchIndexFileName: string;
+	pageTitle: string;
+	pageOgImage: string;
+	noindex: boolean;
+	liveReload: boolean;
 }
 
 const DOCIA_GITHUB_URL = "https://github.com/torstendittmann/docia";
+const THEME_INIT_SCRIPT = `(function(){try{var r=document.documentElement;var m=localStorage.getItem("docia-color-mode");if(m!=="system"&&m!=="light"&&m!=="dark")m=r.dataset.defaultTheme||"system";r.dataset.theme=m}catch(e){}})();`;
+
+function resolveThemeAssetHref(config: ResolvedConfig, href: string): string {
+	return /^(?:[a-zA-Z][a-zA-Z0-9+.-]*:|\/\/)/.test(href)
+		? href
+		: toBasePathHref(config.basePath, href);
+}
 
 function IconGithub(): JSX.Element {
 	return (
@@ -97,6 +108,58 @@ function IconCopy(): JSX.Element {
 				d="M16 1H6a2 2 0 0 0-2 2v12h2V3h10V1Zm3 4H10a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H10V7h9v14Z"
 			/>
 		</svg>
+	);
+}
+
+function IconThemeLight(): JSX.Element {
+	return (
+		<svg className="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+			<circle cx="12" cy="12" r="3.5" />
+			<path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4" />
+		</svg>
+	);
+}
+
+function IconThemeSystem(): JSX.Element {
+	return (
+		<svg className="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+			<rect x="3" y="4" width="18" height="13" rx="2" />
+			<path d="M8 21h8M12 17v4" />
+		</svg>
+	);
+}
+
+function IconThemeDark(): JSX.Element {
+	return (
+		<svg className="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+			<path d="M20.5 15.2A8.7 8.7 0 0 1 8.8 3.5 8.7 8.7 0 1 0 20.5 15.2Z" />
+		</svg>
+	);
+}
+
+function ThemeSwitcher(props: { defaultMode: ThemeColorMode }): JSX.Element {
+	const modes: Array<{ mode: ThemeColorMode; label: string; icon: JSX.Element }> = [
+		{ mode: "light", label: "Light", icon: <IconThemeLight /> },
+		{ mode: "system", label: "System", icon: <IconThemeSystem /> },
+		{ mode: "dark", label: "Dark", icon: <IconThemeDark /> },
+	];
+
+	return (
+		<div className="theme-switcher" role="group" aria-label="Color mode">
+			{modes.map(({ mode, label, icon }) => (
+				<button
+					key={mode}
+					className="theme-option"
+					type="button"
+					data-theme-mode={mode}
+					aria-label={`Use ${label.toLowerCase()} theme`}
+					aria-pressed={props.defaultMode === mode}
+					title={label}
+				>
+					{icon}
+				</button>
+			))}
+		</div>
 	);
 }
 
@@ -344,7 +407,7 @@ function renderSidebarFooter(config: ResolvedConfig): JSX.Element {
 				target="_blank"
 				rel="noopener noreferrer"
 			>
-				Powered by docsia
+				Powered by docia
 			</a>
 		</div>
 	);
@@ -426,13 +489,22 @@ function Head(props: {
 	pageDescription: string;
 	assets: RenderAssetManifest;
 	searchIndexFileName: string;
+	pageTitle: string;
+	pageOgImage: string;
+	noindex: boolean;
+	liveReload: boolean;
 }): JSX.Element {
 	const siteTitle = props.config.site.title;
-	const pageTitle = `${props.chapter.title} - ${siteTitle}`;
+	const pageTitle = `${props.pageTitle} - ${siteTitle}`;
 	const canonical = resolveCanonicalUrl(props.config, props.chapter.routePath);
 	const description = resolveMetaDescription(props.config, props.pageDescription);
-	const ogImageHref = toBasePathHref(props.config.basePath, props.config.site.ogImage);
-	const ogImageUrl = resolveAbsoluteUrl(props.config, ogImageHref) ?? ogImageHref;
+	const ogImageHref =
+		props.pageOgImage.trim().length > 0
+			? resolveThemeAssetHref(props.config, props.pageOgImage)
+			: null;
+	const ogImageUrl = ogImageHref
+		? (resolveAbsoluteUrl(props.config, ogImageHref) ?? ogImageHref)
+		: null;
 
 	const searchIndexHref = toBasePathHref(
 		props.config.basePath,
@@ -448,7 +520,7 @@ function Head(props: {
 		? toJsonScript({
 				"@context": "https://schema.org",
 				"@type": "TechArticle",
-				headline: props.chapter.title,
+				headline: props.pageTitle,
 				inLanguage: props.config.site.language,
 				description: description || undefined,
 				isPartOf: {
@@ -469,15 +541,21 @@ function Head(props: {
 			<meta name="docia-search-index" content={searchIndexHref} />
 			<meta name="docia-markdown-url" content={markdownHref} />
 			<meta name="docia-llms-url" content={llmsHref} />
+			{props.liveReload ? (
+				<meta
+					name="docia-live-reload"
+					content={toBasePathHref(props.config.basePath, "/__docia/events")}
+				/>
+			) : null}
 			<meta name="theme-color" content="#0f172a" />
-			<meta name="robots" content="index,follow" />
+			<meta name="robots" content={props.noindex ? "noindex,nofollow" : "index,follow"} />
 			<meta property="og:type" content="article" />
 			<meta property="og:site_name" content={siteTitle} />
 			<meta property="og:title" content={pageTitle} />
-			<meta property="og:image" content={ogImageUrl} />
-			<meta name="twitter:card" content="summary_large_image" />
+			{ogImageUrl ? <meta property="og:image" content={ogImageUrl} /> : null}
+			<meta name="twitter:card" content={ogImageUrl ? "summary_large_image" : "summary"} />
 			<meta name="twitter:title" content={pageTitle} />
-			<meta name="twitter:image" content={ogImageUrl} />
+			{ogImageUrl ? <meta name="twitter:image" content={ogImageUrl} /> : null}
 			{description.length > 0 ? <meta name="description" content={description} /> : null}
 			{description.length > 0 ? (
 				<meta property="og:description" content={description} />
@@ -486,16 +564,27 @@ function Head(props: {
 				<meta name="twitter:description" content={description} />
 			) : null}
 			<link rel="preload" href={searchIndexHref} as="fetch" crossOrigin="anonymous" />
-			<link
-				rel="icon"
-				type="image/svg+xml"
-				href={toBasePathHref(props.config.basePath, "/favicon.svg")}
-			/>
+			<link rel="alternate" type="text/markdown" href={markdownHref} />
+			<link rel="describedby" href={llmsHref} />
+			{props.config.theme.favicon.length > 0 ? (
+				<link
+					rel="icon"
+					href={resolveThemeAssetHref(props.config, props.config.theme.favicon)}
+				/>
+			) : null}
 			{canonical ? <link rel="canonical" href={canonical} /> : null}
 			{canonical ? <meta property="og:url" content={canonical} /> : null}
 			{props.assets.stylesheetHref ? (
 				<link rel="stylesheet" href={props.assets.stylesheetHref} />
 			) : null}
+			{props.config.theme.customCss.map((href) => (
+				<link
+					key={href}
+					rel="stylesheet"
+					href={resolveThemeAssetHref(props.config, href)}
+				/>
+			))}
+			<script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
 			{jsonLd ? (
 				<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
 			) : null}
@@ -542,6 +631,10 @@ function PageDocument(props: RenderPageLayoutInput): JSX.Element {
 		pageDescription,
 		assets,
 		searchIndexFileName,
+		pageTitle,
+		pageOgImage,
+		noindex,
+		liveReload,
 	} = props;
 
 	const markdownHref = toBasePathHref(
@@ -553,70 +646,98 @@ function PageDocument(props: RenderPageLayoutInput): JSX.Element {
 	const appClassName = hasToc ? "app" : "app app-no-toc";
 	const editUrl = resolveEditUrl(config, chapter);
 
+	const htmlStyle =
+		config.theme.accentColor.length > 0
+			? ({ "--docia-accent": config.theme.accentColor } as CSSProperties)
+			: undefined;
+
 	return (
-		<html lang={config.site.language}>
+		<html
+			lang={config.site.language}
+			data-theme={config.theme.colorMode}
+			data-default-theme={config.theme.colorMode}
+			style={htmlStyle}
+		>
 			<Head
 				config={config}
 				chapter={chapter}
 				pageDescription={pageDescription}
 				assets={assets}
 				searchIndexFileName={searchIndexFileName}
+				pageTitle={pageTitle}
+				pageOgImage={pageOgImage}
+				noindex={noindex}
+				liveReload={liveReload}
 			/>
 			<body>
 				<div className={appClassName}>
-					<aside className="sidebar">
-						<div className="sidebar-top">
-							<p className="brand">{config.site.title}</p>
-							<button
-								id="gd-mobile-nav-toggle"
-								className="mobile-nav-toggle"
-								type="button"
-								aria-expanded="false"
-								aria-controls="gd-mobile-nav-panel"
-							>
-								<svg
-									className="mobile-nav-icon"
-									viewBox="0 0 24 24"
-									aria-hidden="true"
-									focusable="false"
-								>
-									<path
-										fill="currentColor"
-										d="M4 6.5h16v2H4zm0 4.5h16v2H4zm0 4.5h16v2H4z"
-									/>
-								</svg>
-								Menu
-							</button>
-						</div>
-						<div id="gd-mobile-nav-panel" className="mobile-nav-panel">
-							<button
-								id="gd-command-trigger"
-								className="command-trigger"
-								type="button"
-								aria-haspopup="dialog"
-								aria-controls="gd-command-overlay"
-								aria-expanded="false"
-							>
-								<span className="command-trigger-icon" aria-hidden="true">
-									⌘
-								</span>
-								<span className="command-trigger-label">Search docs</span>
-							</button>
-							<nav aria-label="Chapters">
-								<ul className="summary-list">
-									{graph.entries.map((entry) => (
-										<SidebarEntry
-											key={entry.id}
-											entry={entry}
-											config={config}
-											activeChapterId={chapter.id}
+					<div className="sidebar-column">
+						<aside className="sidebar">
+							<div className="sidebar-top">
+								<a className="brand" href={toBasePathHref(config.basePath, "/")}>
+									{config.theme.logo.length > 0 ? (
+										<img
+											className="brand-logo"
+											src={resolveThemeAssetHref(config, config.theme.logo)}
+											alt=""
 										/>
-									))}
-								</ul>
-							</nav>
-							{renderSidebarFooter(config)}
-						</div>
-					</aside>
+									) : null}
+									<span>{config.site.title}</span>
+								</a>
+								<div className="sidebar-controls">
+									<button
+										id="gd-mobile-nav-toggle"
+										className="mobile-nav-toggle"
+										type="button"
+										aria-expanded="false"
+										aria-controls="gd-mobile-nav-panel"
+									>
+										<svg
+											className="mobile-nav-icon"
+											viewBox="0 0 24 24"
+											aria-hidden="true"
+											focusable="false"
+										>
+											<path
+												fill="currentColor"
+												d="M4 6.5h16v2H4zm0 4.5h16v2H4zm0 4.5h16v2H4z"
+											/>
+										</svg>
+										Menu
+									</button>
+								</div>
+							</div>
+							<div id="gd-mobile-nav-panel" className="mobile-nav-panel">
+								<button
+									id="gd-command-trigger"
+									className="command-trigger"
+									type="button"
+									aria-haspopup="dialog"
+									aria-controls="gd-command-overlay"
+									aria-expanded="false"
+								>
+									<span className="command-trigger-icon" aria-hidden="true">
+										⌘
+									</span>
+									<span className="command-trigger-label">Search docs</span>
+								</button>
+								<nav aria-label="Chapters">
+									<ul className="summary-list">
+										{graph.entries.map((entry) => (
+											<SidebarEntry
+												key={entry.id}
+												entry={entry}
+												config={config}
+												activeChapterId={chapter.id}
+											/>
+										))}
+									</ul>
+								</nav>
+								{renderSidebarFooter(config)}
+							</div>
+						</aside>
+						<ThemeSwitcher defaultMode={config.theme.colorMode} />
+					</div>
 
 					<main className="content">
 						<header className="content-header">

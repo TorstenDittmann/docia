@@ -32,3 +32,13 @@ Every page includes a markdown action control:
 - `Open in Claude`
 
 These are client-side helpers; static output remains usable without JavaScript.
+
+## Discovery links
+
+Every generated HTML page includes the standard discovery relations recommended by llms.txt v2:
+
+- `rel="alternate" type="text/markdown"` points to the page's Markdown mirror
+- `rel="describedby"` points to the site's `llms.txt`
+
+The existing `docia-markdown-url` and `docia-llms-url` metadata remains available for docia's
+client-side actions.

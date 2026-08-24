@@ -1,4 +1,5 @@
 export { loadSummaryGraph } from "./summary";
+export { resolveChapterLocation, resolveRedirectLocation } from "./routes";
 
 export type {
 	SummaryBaseEntry,
@@ -9,3 +10,5 @@ export type {
 	SummaryLinkEntry,
 	SummarySectionEntry,
 } from "./types";
+export type { LoadSummaryGraphOptions } from "./summary";
+export type { PageLocation } from "./routes";

@@ -11,6 +11,7 @@ export default defineConfig({
 		description: "Usage guide for building static documentation with docia.",
 		language: "en",
 		url: "https://docia.xyz/",
+		ogImage: "/og.png",
 		socials: {
 			github: "https://github.com/TorstenDittmann/docia",
 			x: "https://x.com/dittmanntorsten",

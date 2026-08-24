@@ -17,12 +17,17 @@ interface NavigateOptions {
 
 const HEAD_SYNC_SELECTORS = [
 	"meta[name='description']",
-	"meta[property='og:title']",
+	"meta[name='robots']",
+	"meta[property^='og:']",
+	"meta[name^='twitter:']",
 	"meta[name='docia-base-path']",
 	"meta[name='docia-search-index']",
 	"meta[name='docia-markdown-url']",
 	"meta[name='docia-llms-url']",
+	"meta[name='docia-live-reload']",
 	"link[rel='canonical']",
+	"link[rel='alternate'][type='text/markdown']",
+	"link[rel='describedby']",
 	"script[type='application/ld+json']",
 ] as const;
 

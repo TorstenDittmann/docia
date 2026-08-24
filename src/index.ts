@@ -1,8 +1,11 @@
 export { defineConfig } from "./config/define-config";
 
 export type {
+	DociaConfig,
+	DociaUserConfig,
 	GoodDocsConfig,
 	GoodDocsUserConfig,
+	ImageOptimizationConfig,
 	LoadedConfigResult,
 	MarkdownAutolinksConfig,
 	MarkdownConfig,
@@ -10,4 +13,6 @@ export type {
 	ResolvedConfig,
 	SiteConfig,
 	SiteSocialsConfig,
+	ThemeColorMode,
+	ThemeConfig,
 } from "./config/types";
