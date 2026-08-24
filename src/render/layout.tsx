@@ -1,7 +1,7 @@
 import type { CSSProperties, JSX } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { SummaryChapterEntry, SummaryEntry, SummaryGraph, SummaryLinkEntry } from "../book";
-import type { ResolvedConfig } from "../config/types";
+import type { ResolvedConfig, ThemeColorMode } from "../config/types";
 import type { MarkdownHeading } from "../markdown";
 import { encodePathForHref, toBasePathHref } from "../utils/html";
 
@@ -108,6 +108,58 @@ function IconCopy(): JSX.Element {
 				d="M16 1H6a2 2 0 0 0-2 2v12h2V3h10V1Zm3 4H10a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H10V7h9v14Z"
 			/>
 		</svg>
+	);
+}
+
+function IconThemeLight(): JSX.Element {
+	return (
+		<svg className="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+			<circle cx="12" cy="12" r="3.5" />
+			<path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4" />
+		</svg>
+	);
+}
+
+function IconThemeSystem(): JSX.Element {
+	return (
+		<svg className="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+			<rect x="3" y="4" width="18" height="13" rx="2" />
+			<path d="M8 21h8M12 17v4" />
+		</svg>
+	);
+}
+
+function IconThemeDark(): JSX.Element {
+	return (
+		<svg className="theme-option-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+			<path d="M20.5 15.2A8.7 8.7 0 0 1 8.8 3.5 8.7 8.7 0 1 0 20.5 15.2Z" />
+		</svg>
+	);
+}
+
+function ThemeSwitcher(props: { defaultMode: ThemeColorMode }): JSX.Element {
+	const modes: Array<{ mode: ThemeColorMode; label: string; icon: JSX.Element }> = [
+		{ mode: "light", label: "Light", icon: <IconThemeLight /> },
+		{ mode: "system", label: "System", icon: <IconThemeSystem /> },
+		{ mode: "dark", label: "Dark", icon: <IconThemeDark /> },
+	];
+
+	return (
+		<div className="theme-switcher" role="group" aria-label="Color mode">
+			{modes.map(({ mode, label, icon }) => (
+				<button
+					key={mode}
+					className="theme-option"
+					type="button"
+					data-theme-mode={mode}
+					aria-label={`Use ${label.toLowerCase()} theme`}
+					aria-pressed={props.defaultMode === mode}
+					title={label}
+				>
+					{icon}
+				</button>
+			))}
+		</div>
 	);
 }
 
@@ -619,80 +671,73 @@ function PageDocument(props: RenderPageLayoutInput): JSX.Element {
 			/>
 			<body>
 				<div className={appClassName}>
-					<aside className="sidebar">
-						<div className="sidebar-top">
-							<a className="brand" href={toBasePathHref(config.basePath, "/")}>
-								{config.theme.logo.length > 0 ? (
-									<img
-										className="brand-logo"
-										src={resolveThemeAssetHref(config, config.theme.logo)}
-										alt=""
-									/>
-								) : null}
-								<span>{config.site.title}</span>
-							</a>
-							<div className="sidebar-controls">
-								<button
-									id="gd-theme-toggle"
-									className="theme-toggle"
-									type="button"
-									aria-label="Change color mode"
-									title="Change color mode"
-								>
-									<span aria-hidden="true">◐</span>
-									<span data-theme-label>System</span>
-								</button>
-								<button
-									id="gd-mobile-nav-toggle"
-									className="mobile-nav-toggle"
-									type="button"
-									aria-expanded="false"
-									aria-controls="gd-mobile-nav-panel"
-								>
-									<svg
-										className="mobile-nav-icon"
-										viewBox="0 0 24 24"
-										aria-hidden="true"
-										focusable="false"
+					<div className="sidebar-column">
+						<aside className="sidebar">
+							<div className="sidebar-top">
+								<a className="brand" href={toBasePathHref(config.basePath, "/")}>
+									{config.theme.logo.length > 0 ? (
+										<img
+											className="brand-logo"
+											src={resolveThemeAssetHref(config, config.theme.logo)}
+											alt=""
+										/>
+									) : null}
+									<span>{config.site.title}</span>
+								</a>
+								<div className="sidebar-controls">
+									<button
+										id="gd-mobile-nav-toggle"
+										className="mobile-nav-toggle"
+										type="button"
+										aria-expanded="false"
+										aria-controls="gd-mobile-nav-panel"
 									>
-										<path
-											fill="currentColor"
-											d="M4 6.5h16v2H4zm0 4.5h16v2H4zm0 4.5h16v2H4z"
-										/>
-									</svg>
-									Menu
-								</button>
+										<svg
+											className="mobile-nav-icon"
+											viewBox="0 0 24 24"
+											aria-hidden="true"
+											focusable="false"
+										>
+											<path
+												fill="currentColor"
+												d="M4 6.5h16v2H4zm0 4.5h16v2H4zm0 4.5h16v2H4z"
+											/>
+										</svg>
+										Menu
+									</button>
+								</div>
 							</div>
-						</div>
-						<div id="gd-mobile-nav-panel" className="mobile-nav-panel">
-							<button
-								id="gd-command-trigger"
-								className="command-trigger"
-								type="button"
-								aria-haspopup="dialog"
-								aria-controls="gd-command-overlay"
-								aria-expanded="false"
-							>
-								<span className="command-trigger-icon" aria-hidden="true">
-									⌘
-								</span>
-								<span className="command-trigger-label">Search docs</span>
-							</button>
-							<nav aria-label="Chapters">
-								<ul className="summary-list">
-									{graph.entries.map((entry) => (
-										<SidebarEntry
-											key={entry.id}
-											entry={entry}
-											config={config}
-											activeChapterId={chapter.id}
-										/>
-									))}
-								</ul>
-							</nav>
-							{renderSidebarFooter(config)}
-						</div>
-					</aside>
+							<div id="gd-mobile-nav-panel" className="mobile-nav-panel">
+								<button
+									id="gd-command-trigger"
+									className="command-trigger"
+									type="button"
+									aria-haspopup="dialog"
+									aria-controls="gd-command-overlay"
+									aria-expanded="false"
+								>
+									<span className="command-trigger-icon" aria-hidden="true">
+										⌘
+									</span>
+									<span className="command-trigger-label">Search docs</span>
+								</button>
+								<nav aria-label="Chapters">
+									<ul className="summary-list">
+										{graph.entries.map((entry) => (
+											<SidebarEntry
+												key={entry.id}
+												entry={entry}
+												config={config}
+												activeChapterId={chapter.id}
+											/>
+										))}
+									</ul>
+								</nav>
+								{renderSidebarFooter(config)}
+							</div>
+						</aside>
+						<ThemeSwitcher defaultMode={config.theme.colorMode} />
+					</div>
 
 					<main className="content">
 						<header className="content-header">
